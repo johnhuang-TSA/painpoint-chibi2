@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>最簡單的問題，最難的答案｜Q 版公仔真人化 v2</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;
+    font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+    color:#fff8ea;-webkit-font-smoothing:antialiased;}
+  #stage{position:fixed;overflow:hidden;background:#0a0a10;--vw:9.6px;}
+  #darkness{position:absolute;inset:0;background:#05060c;opacity:0;will-change:opacity;pointer-events:none;z-index:8;}
+
+  .scene{position:absolute;inset:0;opacity:0;will-change:opacity;overflow:hidden;}
+  .vfallback{position:absolute;inset:0;}
+  .vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;will-change:transform;transform-origin:50% 42%;} /* 定格後緩慢推近的縮放原點（略偏上，對準角色） */
+  /* 各幕退回底色（影片沒載入時的 fallback 心情色） */
+  #s1 .vfallback{background:linear-gradient(180deg,#3a5f8a,#9fc4e8 60%,#cfe0d0);}
+  #s2 .vfallback{background:linear-gradient(180deg,#3f4a74,#8a5f7e 55%,#e0a060);}
+  #s3 .vfallback{background:linear-gradient(180deg,#2e3a5c,#57628c 60%,#4a4a46);}
+  #sA .vfallback{background:radial-gradient(120% 95% at 50% 40%,#241d14,#100b06);}
+  #s4 .vfallback{background:linear-gradient(180deg,#070b1e,#131c38 68%,#0a0f1e);}
+  #sB .vfallback{background:radial-gradient(115% 85% at 50% 20%,#2a1f16,#0c0810);}
+  #s5 .vfallback{background:linear-gradient(180deg,#f6c88b,#fcecc0 55%,#6f9a54);}
+  #s6 .vfallback{background:linear-gradient(180deg,#9cd0e8,#f4f0d2 58%,#84ab60);}
+
+  .overlay{position:absolute;inset:0;z-index:5;}
+  .lower{position:absolute;left:6%;right:6%;bottom:8%;text-align:center;line-height:1.4;z-index:6;}
+  .center{position:absolute;left:7%;right:7%;bottom:8%;text-align:center;line-height:1.45;z-index:6;} /* 原本置中會擋角色，改貼下方 */
+  .big{font-weight:800;letter-spacing:.04em;font-size:min(3.8vw,4.4vh);}
+  .mid{font-weight:700;letter-spacing:.03em;font-size:min(2.8vw,3.3vh);}
+  /* 對話框：圓角＋立體＋朝上的尾巴（指向上方的角色），用顏色分說話者 */
+  .cap{display:none;position:relative;padding:.34em 1em;border-radius:1em;background:rgba(10,14,24,.74);/* 依使用者要求拿掉下方對白框；改回 inline-block 即恢復 */backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+    border:1px solid rgba(255,255,255,.16);box-shadow:0 .5vh 1.8vh rgba(0,0,0,.5);
+    text-shadow:0 .08em .4em rgba(0,0,0,.95);}
+  .cap::after{content:"";position:absolute;left:50%;top:-0.6em;transform:translateX(-50%);border:0.6em solid transparent;border-bottom-color:rgba(10,14,24,.74);border-top:0;}
+  #s1 .cap{background:rgba(22,46,80,.82);} #s1 .cap::after{border-bottom-color:rgba(22,46,80,.82);} /* 同事發問＝藍框 */
+  #s5 .cap{background:rgba(16,48,46,.82);} #s5 .cap::after{border-bottom-color:rgba(16,48,46,.82);} /* AI 希望＝青框 */
+  /* v2（評審🔴3+6）：恢復開場鉤子與核心主張兩張字卡；其餘字幕維持隱藏 */
+  #s1 .cap,#s5 .cap{display:inline-block;}
+  #s1 .cap::after{display:none;} /* 問句移到上方後，朝上尾巴沒有指向對象，關掉 */
+  #s1 .lower{bottom:auto;top:13%;} /* 鉤子問句移上方置中，評審注意力最高的前4秒直接看到問題 */
+  #s1 .big{font-size:min(4.6vw,5.4vh);}
+  .cur{display:inline-block;width:.08em;height:1em;background:currentColor;margin-left:.06em;vertical-align:-0.12em;animation:blink 1s steps(1) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+  #clock{position:absolute;right:6%;top:11%;font-family:"Consolas",monospace;z-index:7;
+    font-size:min(3vw,3.4vh);letter-spacing:.1em;color:#eef4ff;opacity:0;text-shadow:0 0 .6em rgba(0,0,20,.95);will-change:opacity;}
+  /* 角色標記（同事 / AI 同事）：小名牌＋朝下尾巴，指向下方角色 */
+  .charmark{position:absolute;z-index:7;display:inline-flex;align-items:center;gap:.3em;font-weight:800;font-size:min(1.7vw,2.1vh);letter-spacing:.04em;color:#0a1018;background:linear-gradient(180deg,#ffffff,#dbe8ff);padding:.26em .7em;border-radius:.6em;border:2px solid #fff;box-shadow:0 .4vh 1.4vh rgba(0,0,0,.5);white-space:nowrap;
+    opacity:0;transform:translateY(.8vh) scale(.88);transition:opacity .4s,transform .4s;} /* 預設隱藏，等影片裡人物現身才彈出 */
+  .charmark.show{opacity:1;transform:none;}
+  .charmark::after{content:"";position:absolute;left:50%;bottom:-0.48em;transform:translateX(-50%);border:0.48em solid transparent;border-top-color:#dbe8ff;border-bottom:0;}
+  .charmark.ai{background:linear-gradient(180deg,#dffff6,#79e6cf);border-color:#eafffb;color:#043a2f;}
+  .charmark.ai::after{border-top-color:#79e6cf;}
+  #mark1{top:11%;right:20%;} /* 場景1：同事在右（頭頂約x74%/y20%，標記緊貼頭上） */
+  #mark7{top:7%;right:13%;} /* 場景7：AI 機器人在右 */
+
+  /* 場景2：部門標記跟著鏡頭裡的人物頭頂移動（位置由 JS 依影片時間驅動），哲人每站問完亮燈泡 */
+  #deptStrip{position:absolute;inset:0;z-index:6;pointer-events:none;
+    -webkit-mask:linear-gradient(90deg,#000 0 38.5%,transparent 38.5% 49%,#000 49% 100%);
+    mask:linear-gradient(90deg,#000 0 38.5%,transparent 38.5% 49%,#000 49% 100%);} /* 主角所在直帶挖空：標記滑到他身後會被平滑切掉、另一側再露出（真遮擋，不閃爍） */
+  .dchip{position:absolute;font-weight:800;font-size:min(2.7vw,3.2vh);letter-spacing:.08em;padding:.28em .8em;border-radius:.55em;
+    color:#0a1018;background:var(--c);border:2.5px solid #fff;box-shadow:0 .4vh 1.4vh rgba(0,0,0,.5),0 0 2.2vh var(--c);
+    opacity:0;transform:translate(-50%,.8vh) scale(.88);transition:opacity .28s,transform .28s;white-space:nowrap;} /* 字放大；遮擋用較快的淡入出 */
+  .dchip::after{content:"";position:absolute;left:50%;bottom:-0.48em;transform:translateX(-50%);border:0.48em solid transparent;border-top-color:var(--c);border-bottom:0;}
+  .dchip.lit{opacity:1;transform:translate(-50%,0);}
+  #bulb{position:absolute;left:44%;top:6%;z-index:7;font-size:min(4.5vw,5.5vh);opacity:0;transform:translateY(1vh) scale(.6);transition:opacity .25s,transform .25s;filter:drop-shadow(0 0 1.2vh rgba(255,220,80,.9));pointer-events:none;}
+  #bulb.on{opacity:1;transform:none;}
+  /* 場景3：時鐘快轉（呼應「一個下午就沒了」） */
+  #fastclock{position:absolute;right:7%;top:10%;width:min(11vw,14vh);height:min(11vw,14vh);z-index:6;opacity:0;transition:opacity .6s;
+    border-radius:50%;background:rgba(250,247,238,.92);border:.4vh solid #6b5b3e;box-shadow:0 .6vh 2vh rgba(0,0,0,.5);pointer-events:none;}
+  #fastclock::after{content:"";position:absolute;left:50%;top:50%;width:9%;height:9%;background:#333;border-radius:50%;transform:translate(-50%,-50%);}
+  .fc-m,.fc-h{position:absolute;left:48.5%;bottom:50%;transform-origin:bottom center;background:#333;border-radius:1vh;}
+  .fc-m{width:3%;height:42%;animation:fcspin 1.1s linear infinite;}
+  .fc-h{width:5%;height:28%;background:#555;animation:fcspin 13.2s linear infinite;}
+  @keyframes fcspin{to{transform:rotate(360deg);}}
+
+  /* 場景3：表名紙卡（唸到才浮現） */
+  #tableWrap{position:absolute;left:6%;right:6%;bottom:17%;z-index:6;display:flex;flex-wrap:wrap;justify-content:center;gap:.7vh 1vh;} /* 改成底部一列小卡，不再散佈中央擋角色 */
+  .tchip{opacity:0;transition:opacity .4s,transform .4s;transform:translateY(1vh);
+    font-weight:700;font-size:min(2.7vw,3.2vh);letter-spacing:.06em;color:#3a2b12;
+    background:linear-gradient(180deg,#fbf3df,#ecdcb6);padding:.2em .6em;border-radius:.35em;border:1px solid #b99c6a;
+    box-shadow:0 .4vh 1.2vh rgba(0,0,0,.45);}
+  .tchip.on{opacity:.94;transform:translateY(0);}
+
+  /* 場景A：ERP vs 新得利 實際數字對照 — ERP 先亮在左上(放大)→新得利右上→中間深色「差18」凸顯，依旁白節奏依序出現 */
+  #numpanel{position:absolute;inset:0;z-index:6;pointer-events:none;}
+  .numcol{position:absolute;top:6%;opacity:0;transform:translateY(-.8vh);transition:opacity .55s,transform .55s;
+    background:rgba(8,10,18,.68);border:2px solid;border-radius:.5em;padding:.28em 1em;text-align:center;min-width:min(15vw,19vh);box-shadow:0 .5vh 1.6vh rgba(0,0,0,.5);}
+  .numcol.on{opacity:1;transform:none;}
+  .numcol.erp{left:5%;border-color:#5aa0ff;} .numcol.xdl{right:5%;border-color:#4ad08a;}
+  .numcol .nk{font-size:min(1.9vw,2.4vh);letter-spacing:.12em;opacity:.95;}
+  .numcol .nv{font-size:min(4.8vw,5.8vh);font-weight:900;line-height:1.05;}
+  .numcol.erp .nv{color:#a8ccff;} .numcol.xdl .nv{color:#a8f0c6;}
+  #numdiff{position:absolute;left:50%;top:8%;transform:translate(-50%,-.8vh);opacity:0;transition:opacity .55s,transform .55s;
+    background:rgba(3,4,8,.94);border:3px solid #ff9a6a;border-radius:.5em;padding:.45em 1.1em;font-weight:900;font-size:min(2.6vw,3.2vh);color:#fff;text-align:center;line-height:1.35;box-shadow:0 .6vh 2.4vh rgba(0,0,0,.75),0 0 2vh rgba(255,120,60,.45);} /* v2：警示橘框+光暈，衝突高潮不再隱形 */
+  #numdiff.on{opacity:1;transform:translate(-50%,0);}
+  /* 場景6：有憑據的答案卡＋CTA — 壓成貼底細長條，只蓋腳邊地板、不蓋人物 */
+  #s6 .center{left:2%;right:2%;bottom:1.5%;}
+  /* v2（評審🔴4）：答案卡是全片 payoff——底加深、字級設下限保底、證據逐格彈出「一條一條查給你看」 */
+  #anscard{max-width:98%;margin:0 auto;background:rgba(8,12,20,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(180,210,255,.22);border-radius:.6em;padding:.35em .8em;text-align:center;opacity:0;transition:opacity .6s;} /* 等旁白講到 AI 給答案才亮 */
+  #ask6{display:none;} /* 問句已在第1段出現過，收尾省掉以壓低卡片高度 */
+  #ansHead{font-weight:800;display:inline-block;font-size:max(16px,min(2.6vw,3.1vh));color:#fff2d8;text-shadow:0 .1em .6em rgba(0,0,0,.7);vertical-align:middle;margin-right:.6em;}
+  #evid{display:inline-flex;opacity:0;transition:opacity .6s;flex-wrap:wrap;justify-content:center;align-items:center;gap:.3vh .5vw;vertical-align:middle;}
+  #evid .erow{display:inline-flex;flex-direction:column;justify-content:center;gap:0;border-bottom:none;background:rgba(255,255,255,.09);border-radius:.35em;padding:.16em .6em;
+    opacity:0;transform:translateY(.6vh);transition:opacity .4s,transform .4s;}
+  #evid.on .erow{opacity:1;transform:none;}
+  #evid.on .erow:nth-child(1){transition-delay:0s;} #evid.on .erow:nth-child(2){transition-delay:.3s;}
+  #evid.on .erow:nth-child(3){transition-delay:.6s;} #evid.on .erow:nth-child(4){transition-delay:.9s;}
+  #evid .ek{color:#bcd2ee;font-size:max(12px,min(1.4vw,1.7vh));white-space:nowrap;} #evid .ev{font-weight:700;color:#fff;font-size:max(14px,min(1.8vw,2.2vh));white-space:nowrap;}
+  #evid .esrc{flex-basis:100%;margin-top:.2vh;font-size:max(11px,min(1.3vw,1.6vh));color:#c3d2e8;opacity:0;transition:opacity .4s;transition-delay:1.2s;}
+  #evid.on .esrc{opacity:1;}
+  #slogan{display:inline-block;margin:.2vh .8em 0 0;font-weight:800;font-size:min(1.9vw,2.4vh);letter-spacing:.04em;color:#ffcf8a;opacity:0;transition:opacity .6s;text-shadow:0 .1em .6em rgba(0,0,0,.7);vertical-align:middle;}
+  #cta{display:none;} /* 依使用者要求移除「選 3 個高頻問題」CTA 行 */
+  #cta .ctabtn{font-size:min(1.6vw,2vh)!important;padding:.3em .8em!important;}
+  #cta .ctabtn{display:inline-block;background:linear-gradient(180deg,#ffd98a,#e8a24a);color:#2a1a06;font-weight:800;font-size:min(2vw,2.5vh);letter-spacing:.04em;padding:.4em 1em;border-radius:.5em;box-shadow:0 .5vh 2vh rgba(232,140,40,.4);}
+  #grain{position:absolute;inset:-50%;pointer-events:none;opacity:.07;z-index:9;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+  #vignette{position:absolute;inset:0;pointer-events:none;z-index:9;background:radial-gradient(125% 105% at 50% 50%,rgba(0,0,0,0) 58%,rgba(0,0,0,.5) 100%);}
+  .bar-cine{position:absolute;left:0;right:0;height:0;background:#000;z-index:20;pointer-events:none;transition:height .25s cubic-bezier(.7,0,.3,1);}
+  #barTop{top:0;} #barBot{bottom:0;}
+  body.cine #barTop,body.cine #barBot{height:0;} /* 去黑邊，讓動畫露出滿版 */
+
+  #bottomUI{position:absolute;left:0;right:0;bottom:0;z-index:25;padding:7px 16px 9px;background:linear-gradient(0deg,rgba(8,8,14,.95) 58%,rgba(8,8,14,0));opacity:0;transition:opacity .5s;}
+  #bottomUI.show{opacity:1;}
+  #bottomUI.show.hideui{opacity:0;pointer-events:none;} /* 播放中無操作自動隱藏，讓動畫不被控制列干擾 */
+  #tlPhases{display:flex;gap:4px;max-width:1000px;margin:0 auto;}
+  .ph{flex:1;cursor:pointer;text-align:center;padding:4px 2px 8px;border-radius:5px;position:relative;transition:background .3s;}
+  .ph:hover{background:rgba(150,190,240,.12);}
+  .ph .dot{width:9px;height:9px;border-radius:50%;background:#2e3a4a;margin:0 auto 3px;border:2px solid #44546a;transition:all .3s;}
+  .ph.done .dot{background:#6a92c0;border-color:#8fb0d4;}
+  .ph.active .dot{background:#dfeeff;border-color:#fff;box-shadow:0 0 10px #9fc0e0;}
+  .ph .pn{font-size:min(1.15vw,1.5vh);color:#8298b2;white-space:nowrap;}
+  .ph.active .pn{color:#eaf4ff;font-weight:700;}
+  .ph .pb{position:absolute;left:8%;right:8%;bottom:1px;height:2px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;}
+  .ph .pb i{display:block;height:100%;width:0;background:#9fc0e0;}
+  #tlCtrl{display:flex;justify-content:center;align-items:center;gap:7px;margin-top:6px;flex-wrap:wrap;}
+  #tlCtrl button{background:rgba(14,18,28,.88);border:1px solid rgba(150,180,220,.3);color:#e6eefa;border-radius:5px;padding:5px 12px;font-size:min(1.35vw,1.7vh);cursor:pointer;font-family:inherit;}
+  #tlCtrl button:hover{border-color:#9fc0e0;color:#fff;}
+  #tlCtrl button.on{background:rgba(120,160,210,.2);border-color:#9fc0e0;color:#fff;}
+  #tlCtrl .sep{color:#3a4656;}
+  #tlCtrl select{background:rgba(14,18,28,.9);border:1px solid rgba(150,180,220,.3);color:#e6eefa;border-radius:5px;padding:5px 7px;font-size:min(1.2vw,1.55vh);font-family:inherit;max-width:26vw;cursor:pointer;}
+
+  #start{position:absolute;inset:0;z-index:40;background:linear-gradient(180deg,#2a3f6a,#4a6fa0 55%,#8fb8d8);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.2vh;transition:opacity .8s;}
+  #start.hide{opacity:0;pointer-events:none;}
+  #start .kick{letter-spacing:.5em;color:#dfeaff;font-size:min(1.5vw,1.8vh);font-weight:700;}
+  #start h1{font-size:min(4.6vw,5.2vh);font-weight:800;letter-spacing:.06em;color:#fff;text-shadow:0 .1em .6em rgba(0,0,40,.4);}
+  #start .meta{color:#dfeaff;font-size:min(1.6vw,1.9vh);}
+  #playBtn{margin-top:1.5vh;padding:1.3vh 5vw;font-size:min(2.1vw,2.4vh);letter-spacing:.3em;text-indent:.3em;color:#123;cursor:pointer;font-family:inherit;font-weight:800;border:none;border-radius:10px;background:linear-gradient(180deg,#fff,#cfe0f5);box-shadow:0 .8vh 3vh rgba(0,20,60,.35);}
+  #playBtn:hover{filter:brightness(1.06);}
+  #start .keys{margin-top:1.6vh;color:#cdddf2;font-size:min(1.3vw,1.6vh);line-height:1.9;text-align:center;}
+  #start .keys b{color:#fff;font-weight:700;}
+  #start .vrow{margin-top:1.4vh;color:#eaf2ff;font-size:min(1.5vw,1.8vh);display:flex;align-items:center;gap:.6em;font-weight:600;}
+  #start .vrow select{background:rgba(255,255,255,.92);border:1px solid #6a88b0;color:#123;border-radius:5px;padding:.6vh 1vh;font-size:min(1.4vw,1.7vh);font-family:inherit;max-width:46vw;cursor:pointer;}
+
+  #rotate{display:none;}
+  @media (max-width:860px){
+    #tlPhases{display:none;}
+    #tlCtrl{gap:6px;row-gap:8px;padding:0 2vw;} #tlCtrl button{font-size:14px;padding:9px 13px;} #tlCtrl select{font-size:13px;padding:8px;max-width:42vw;}
+    #start h1{font-size:7vw;} #start .meta{font-size:3.5vw;} #start .kick{font-size:3vw;letter-spacing:.3em;}
+    #start .keys{display:none;} #start .vrow{flex-wrap:wrap;justify-content:center;font-size:4vw;gap:.4em;} #start .vrow select{font-size:4vw;padding:10px;max-width:84vw;}
+    #playBtn{font-size:5vw;padding:3.2vw 12vw;}
+    .big{font-size:min(7vw,8.2vh)!important;} .mid{font-size:min(4.8vw,5.6vh)!important;} .dchip,.tchip{font-size:4vw!important;}
+  }
+  @media (max-width:860px) and (orientation:portrait){
+    #rotate{display:flex;position:fixed;inset:0;z-index:60;flex-direction:column;align-items:center;justify-content:center;gap:2.6vh;
+      background:linear-gradient(180deg,#2a3f6a,#8fb8d8);color:#fff;text-align:center;padding:10vw;}
+    #rotate .ic{font-size:17vw;animation:rotanim 2.6s ease-in-out infinite;} #rotate h2{font-size:6vw;font-weight:700;} #rotate p{font-size:4vw;color:#dfeaff;line-height:1.8;}
+  }
+  @keyframes rotanim{0%,35%{transform:rotate(0);}55%,100%{transform:rotate(90deg);}}
+  /* ── 第二輪：逐字稿面板 ── */
+  #transcript{position:absolute;top:5%;bottom:17%;right:2%;width:min(34%,420px);z-index:22;background:rgba(6,9,16,.82);border:1px solid rgba(150,180,220,.25);border-radius:.6em;padding:.6em .7em;overflow-y:auto;display:none;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
+  #transcript.show{display:block;}
+  #trhead{font-size:min(1.4vw,1.7vh);color:#9fb2cc;letter-spacing:.08em;margin-bottom:.5em;border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:.35em;}
+  .trline{font-size:min(1.55vw,1.95vh);line-height:1.5;color:#c9d6ea;padding:.35em .5em;border-radius:.35em;cursor:pointer;margin-bottom:.15em;transition:background .3s,color .3s;}
+  .trline:hover{background:rgba(150,190,240,.12);}
+  .trline.cur{background:rgba(120,160,210,.3);color:#fff;font-weight:600;}
+  .trline b{color:#8fb0d4;margin-right:.35em;}
+  /* ── 第二輪：無障礙（鍵盤焦點 + 減少動態）── */
+  #tlCtrl button:focus-visible,#playBtn:focus-visible,#langSel:focus-visible,#langSel0:focus-visible,.ph:focus-visible,.trline:focus-visible{outline:2px solid #9fc0e0;outline-offset:2px;}
+  @media (prefers-reduced-motion: reduce){ .cur{animation:none;opacity:1;} #rotate .ic{animation:none;} #grain{display:none;} }
+  /* ── 第二輪：手機直向仍可續看 ── */
+  #stayPortrait{margin-top:1vh;padding:2.4vw 7vw;font-size:4vw;border:none;border-radius:8px;background:rgba(255,255,255,.92);color:#123;font-weight:700;font-family:inherit;cursor:pointer;}
+  #rotate.dismissed{display:none!important;}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <div class="scene" id="s1"><div class="vfallback"></div><video class="vid" data-v="1" loop muted playsinline preload="auto"></video>
+    <div class="overlay"><div class="charmark" id="mark1">👤 同事</div><div class="lower big"><span class="cap" id="q1"></span></div></div></div>
+
+  <div class="scene" id="s2"><div class="vfallback"></div><video class="vid" data-v="2" loop muted playsinline preload="auto"></video>
+    <div class="overlay"><div id="deptStrip"></div><div id="bulb">💡</div><div class="lower mid"><span class="cap" id="s2line">一個問題，被切成<b style="color:#ff9a6a">四塊</b>。</span></div></div></div>
+
+  <div class="scene" id="s3"><div class="vfallback"></div><video class="vid" data-v="3" loop muted playsinline preload="auto"></video>
+    <div class="overlay"><div id="tableWrap"></div><div id="fastclock"><div class="fc-h"></div><div class="fc-m"></div></div><div class="lower mid"><span class="cap" id="s3line">六張表，<b style="color:#ff9a6a">怎麼也對不完</b>。</span></div></div></div>
+
+  <div class="scene" id="sA"><div class="vfallback"></div><video class="vid" data-v="4" loop muted playsinline preload="auto"></video>
+    <div class="overlay">
+      <div id="numpanel">
+        <div class="numcol erp"><div class="nk">ERP</div><div class="nv">302</div></div>
+        <div id="numdiff">差 18 pcs<br><span style="font-size:.72em;font-weight:600">為什麼？</span></div><!-- v2（評審🔴2）：謎底不提前掀，留給第8段 AI 揭曉 -->
+        <div class="numcol xdl"><div class="nk">新得利</div><div class="nv">284</div></div>
+      </div>
+      <div class="lower mid"><span class="cap" id="sAline">ERP 一個數，新得利另一個數。到底，<b style="color:#ff9a6a">信哪一個</b>？</span></div>
+    </div></div>
+
+  <div class="scene" id="s4"><div class="vfallback"></div><video class="vid" data-v="5" loop muted playsinline preload="auto"></video>
+    <div class="overlay"><div class="center"><div class="mid" style="margin-bottom:1.4vh"><span class="cap" id="s4a">忙了一整天。</span></div>
+      <div class="big"><span class="cap" id="s4b">還是不確定——算得<b style="color:#ff9a6a">對不對</b>。<span class="cur"></span></span></div></div></div></div>
+
+  <div class="scene" id="sB"><div class="vfallback"></div><video class="vid" data-v="6" loop muted playsinline preload="auto"></video>
+    <div class="overlay"><div class="lower mid"><span class="cap" id="sBline">而這，只是這週的<b style="color:#ff9a6a">其中一個</b>品項。</span></div></div></div>
+
+  <div class="scene" id="s5"><div class="vfallback"></div><video class="vid" data-v="7" loop muted playsinline preload="auto"></video>
+    <div class="overlay"><div class="charmark ai" id="mark7">🤖 AI 同事</div><div class="center"><div class="big"><span class="cap" id="s5line"><span style="color:#cfe0f5">如果……</span> 有一個<span style="color:#ffcf8a">「懂供應鏈的 AI 同事」</span>？</span></div></div></div></div>
+
+  <div class="scene" id="s6"><div class="vfallback"></div><video class="vid" data-v="8" loop muted playsinline preload="auto"></video>
+    <div class="overlay"><div class="center">
+      <div id="anscard">
+        <div id="ask6"></div>
+        <div id="ansHead"></div>
+        <div id="evid">
+          <div class="erow"><span class="ek" id="ek0">可用庫存</span><span class="ev" id="ev0">320 pcs</span></div>
+          <div class="erow"><span class="ek" id="ek1">預估需求</span><span class="ev" id="ev1">210 pcs</span></div>
+          <div class="erow"><span class="ek" id="ek2">下一批到貨</span><span class="ev" id="ev2">8/12</span></div>
+          <div class="erow"><span class="ek" id="ek3">兩套系統差異</span><span class="ev" id="ev3">18 pcs・待驗收批次</span></div>
+          <div class="esrc" id="esrc">資料來源：ERP＋新得利｜更新 09:14｜數據為示意</div>
+        </div>
+        <div id="slogan"></div>
+      </div>
+      <div id="cta"><span class="ctabtn" id="ctatext">▸ 選 3 個高頻問題，做兩週 PoC</span></div>
+    </div></div></div>
+
+  <div id="clock">09:14</div>
+  <div id="darkness"></div>
+  <div id="grain"></div>
+  <div id="vignette"></div>
+  <div class="bar-cine" id="barTop"></div>
+  <div class="bar-cine" id="barBot"></div>
+
+  <div id="bottomUI">
+    <div id="tlPhases"></div>
+    <div id="tlCtrl">
+      <button id="btnPrev" aria-label="上一段">⏮ 上一段</button>
+      <button id="btnPlay2" aria-label="暫停或繼續">⏸ 暫停</button>
+      <button id="btnNext2" aria-label="下一段">下一段 ⏭</button>
+      <span class="sep">｜</span>
+      <button id="btnSpeed" aria-label="播放速度">速度 ×1</button>
+      <span class="sep">｜</span>
+      <button id="btnMute2" class="on" aria-label="音樂開關" aria-pressed="true">🔊 音樂</button>
+      <button id="btnNarr2" class="on" aria-label="旁白開關" aria-pressed="true">🗣 旁白</button>
+      <button id="btnScript" aria-label="逐字稿" aria-pressed="false">📄 逐字稿</button>
+      <select id="langSel" title="旁白語言" aria-label="旁白語言"></select>
+      <button id="btnReplay2" aria-label="重播">↻ 重播</button>
+    </div>
+  </div>
+
+  <div id="transcript" aria-label="逐字稿"><div id="trhead">逐字稿 / Transcript</div><div id="trbody"></div></div>
+
+  <div id="start">
+    <div class="kick">SUPPLY CHAIN AI</div><!-- v2（評審🔴7）：拿掉檔名式工作術語；告知隊名/產品名後替換成品牌露出 -->
+    <h1>最簡單的問題，最難的答案</h1>
+    <div class="meta">含旁白約 1.5 分鐘 ‧ 建議全螢幕</div>
+    <button id="playBtn">▶ 開 始</button>
+    <div class="keys"><b>空白鍵</b> 暫停／繼續　　<b>→ / 點擊</b> 下一段　　<b>R</b> 重播　　<b>音樂🔊</b> M　　<b>旁白🗣</b> N</div>
+    <div class="vrow">🌐 旁白語言：<select id="langSel0" title="旁白語言"></select></div>
+  </div>
+</div>
+
+<div id="rotate"><div class="ic">📱</div><h2>請將手機橫放觀看</h2><p>這是 16:9 電影規格的開場影片<br>橫放才能完整、清晰呈現</p><button id="stayPortrait">仍要直向觀看</button></div>
+
+<script>
+'use strict';
+(function(){
+const $=id=>document.getElementById(id);
+const stage=$('stage');
+
+const DUR=[4,12,10,9,5,5,13,14]; // 重寫稿後重新平衡：痛點縮短、AI 解法與量化效益加長
+const B=[0];DUR.forEach(d=>B.push(B[B.length-1]+d));
+const TOTAL=B[B.length-1];
+const FADE=0.5;
+let t=0,playing=false,started=false,lastTs=0,VW=9.6;
+
+const clamp=(x,a,b)=>x<a?a:x>b?b:x;
+const smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
+const easeIO=x=>{x=clamp(x,0,1);return x<0.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;};
+const easeOut=x=>{x=clamp(x,0,1);return 1-Math.pow(1-x,3);};
+function pw(times,vals){if(t<=times[0])return vals[0];for(let i=1;i<times.length;i++){if(t<=times[i]){const p=(t-times[i-1])/(times[i]-times[i-1]);return vals[i-1]+(vals[i]-vals[i-1])*smooth(p);}}return vals[vals.length-1];}
+
+let _lw=0,_lh=0;
+function layout(){const W=innerWidth,H=innerHeight;if(W<2||H<2)return;let w=W,h=W*9/16;if(h>H){h=H;w=H*16/9;}stage.style.width=w+'px';stage.style.height=h+'px';stage.style.left=(W-w)/2+'px';stage.style.top=(H-h)/2+'px';VW=w/100;stage.style.setProperty('--vw',VW+'px');}
+function checkLayout(){if(innerWidth!==_lw||innerHeight!==_lh){_lw=innerWidth;_lh=innerHeight;layout();}}
+addEventListener('resize',layout);addEventListener('load',layout);
+
+// ---------- 影片：每幕一段，載入失敗(缺 v5~v8)則自動退回底色背景 ----------
+const VIDS=[...document.querySelectorAll('.vid')]; // index 0..7 對應 v1..v8、對應場景 0..7
+VIDS.forEach((v,i)=>{v.loop=false;v.addEventListener('error',()=>{v.dataset.bad='1';v.style.display='none';});}); // 不循環：播完停在最後一格（定格）等旁白，避免「播完一輪又重來」的跳接
+function ensureVid(i){const v=VIDS[i];if(v&&!v.getAttribute('src')){v.setAttribute('src','videos/v'+v.getAttribute('data-v')+'.mp4?nowm=2');}} // 分段載入：用到才設 src；?nowm=2 讓瀏覽器放棄舊快取、抓星形遮罩去浮水印新檔
+ensureVid(0);ensureVid(1);
+function sceneFillRate(i){const vd=(VIDS[i]&&VIDS[i].duration)?VIDS[i].duration:10;const sd=N.on?estDur(i):DUR[i];return clamp(vd/sd,0.85,(i===5?1.45:1));} // 近原速播放(0.85~1x，動作才順)；播完定格最後一格等旁白。第六段旁白短→允許加速到綠箱亮相跟旁白同步收
+function playVid(i){ensureVid(i);ensureVid(i+1);VIDS.forEach((v,k)=>{if(k===i){if(!v.dataset.bad){try{v.muted=true;v.currentTime=0;v.playbackRate=sceneFillRate(i)*speed;if(playing){const p=v.play();if(p&&p.catch)p.catch(()=>{});}else{v.pause();}}catch(e){}}}else{try{v.pause();}catch(e){}}});}
+function pauseAllVids(){VIDS.forEach(v=>{try{v.pause();}catch(e){}});}
+function resumeVid(i){const v=VIDS[i];if(v&&!v.dataset.bad&&!v.ended){const p=v.play();if(p&&p.catch)p.catch(()=>{});}} // 已播完定格的不再 play（會從頭重播）
+
+// ---------- 場景2：部門名條 ----------
+const DEPTS=['倉管','生管','採購','品管'];
+const VILC=['#4aa8ff','#4ade7a','#ffb05c','#c070ff'];
+(function(){const w=$('deptStrip');DEPTS.forEach((d,i)=>{const c=document.createElement('div');c.className='dchip';c.style.setProperty('--c',VILC[i]);c.textContent=d;w.appendChild(c);});})();
+const deptEls=[...document.querySelectorAll('.dchip')];
+let qTarget=-1; // （旁白 chunk 掃描仍會更新，供除錯；標記改由影片時間驅動）
+// v2 影片時間軸：四位員工被鏡頭帶到的時間窗與頭頂位置（x 隨鏡頭右→左漂移；由關鍵幀量測）
+const CHIP_T=[
+ {t0:0.6,t1:3.3,tx:3.3,x0:58,x1:32,top:16},  // 倉管（貨架）
+ {t0:3.5,t1:6.3,tx:6.3,x0:70,x1:36,top:17},  // 生管（規劃板）
+ {t0:6.5,t1:8.7,tx:8.7,x0:56,x1:26,top:26},  // 採購（蓋章桌）
+ {t0:8.9,t1:99,tx:10,x0:72,x1:55,top:20}];   // 品管（放大鏡；定格後留在畫面）
+const BULB_T=[[2.5,3.45],[5.45,6.35],[7.85,8.72],[9.2,9.95]]; // 每站問完，哲人頭上亮 💡
+const erpCol=document.querySelector('#numpanel .erp'),xdlCol=document.querySelector('#numpanel .xdl'),diffEl=$('numdiff');
+
+// ---------- 場景3：表名紙卡 ----------
+const LBL=['庫存表','預估表','交期表','採購單','驗收紀錄','品檢記錄'];
+const LBL_AT=[0.7,1.5,2.3,3.1,3.9,4.7];
+const lblShown=[0,0,0,0,0,0];
+const lblEls=[];LBL.forEach((txt,k)=>{const d=document.createElement('div');d.className='tchip';d.textContent=txt;$('tableWrap').appendChild(d);lblEls.push(d);}); // 底部 flex 一列，不再絕對定位
+
+function typeInto(el,text,startLs,cps,ls,showCursor){
+  const n=Math.floor(clamp((ls-startLs)*cps,0,text.length));
+  el.innerHTML=text.slice(0,n).replace(/\n/g,'<br>')+(showCursor?'<span class="cur"></span>':'');
+  return n>=text.length;
+}
+
+// ===== 音樂（Web Audio）— 預設電影弦樂 =====
+const M={ctx:null,master:null,mlp:null,lim:null,bus:null,padOsc:[],padGain:null,padFilt:null,revWet:null,muted:false,vol:0.52,sched:0,beat:0}; // 卡農配樂：音量拉高，旁白時 duck 到 50% 仍聽得到
+const STYLES={
+ cinematic:{name:'🎬 電影弦樂',padMul:1,cutMul:1,pianoMul:1,pulseMul:1,rev:0.55,arp:0,bell:0},
+ piano:{name:'🎹 溫暖鋼琴',padMul:0.55,cutMul:1.5,pianoMul:2.0,pulseMul:0.3,rev:0.62,arp:0,bell:0},
+ ambient:{name:'🌌 空靈氛圍',padMul:1.4,cutMul:0.85,pianoMul:0.7,pulseMul:0.1,rev:1.0,arp:0,bell:1},
+ tech:{name:'⚡ 輕快科技',padMul:0.7,cutMul:1.7,pianoMul:0.5,pulseMul:0.75,rev:0.32,arp:1,bell:0}
+};
+let styleKey='piano';const ST=()=>STYLES[styleKey]; // 溫暖鋼琴：鋼琴為主＋弦樂鋪底，貼合人的掙扎到釋然
+function applyStyle(k){if(!STYLES[k])return;styleKey=k;const a=$('styleSel'),b=$('styleSel0');if(a)a.value=k;if(b)b.value=k;if(M.revWet)M.revWet.gain.value=ST().rev;if(M.ctx)musicScene(sceneAt(t));}
+function buildStyleSel(){['styleSel','styleSel0'].forEach(id=>{const sel=$(id);if(!sel)return;sel.innerHTML='';Object.keys(STYLES).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=STYLES[k].name;sel.appendChild(o);});sel.value=styleKey;});}
+buildStyleSel();
+function _impulse(c,dur,decay){const len=Math.floor(c.sampleRate*dur);const b=c.createBuffer(2,len,c.sampleRate);for(let ch=0;ch<2;ch++){const d=b.getChannelData(ch);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,decay);}return b;}
+function initAudio(){if(M.ctx)return;if(M.vol<=0)return;/* 合成配樂已停用(改用 bgm.mp3)，不建 AudioContext；musicScene/musicTick 靠 !M.ctx 守衛自動略過 */const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;const c=M.ctx=new AC();
+  M.master=c.createGain();M.master.gain.value=M.vol;
+  M.mlp=c.createBiquadFilter();M.mlp.type='lowpass';M.mlp.frequency.value=5200;M.master.connect(M.mlp);
+  M.lim=c.createDynamicsCompressor();M.lim.threshold.value=-3;M.lim.knee.value=0;M.lim.ratio.value=20;M.lim.attack.value=0.003;M.lim.release.value=0.25;M.mlp.connect(M.lim);M.lim.connect(c.destination);
+  M.bus=c.createGain();M.bus.connect(M.master);
+  try{const conv=c.createConvolver();conv.buffer=_impulse(c,2.6,2.4);const w=c.createGain();w.gain.value=ST().rev;M.revWet=w;M.bus.connect(conv);conv.connect(w);w.connect(M.master);}
+  catch(e){const dly=c.createDelay(1);dly.delayTime.value=0.35;const fb=c.createGain();fb.gain.value=0.32;const w=c.createGain();w.gain.value=ST().rev*0.55;M.revWet=w;M.bus.connect(dly);dly.connect(fb);fb.connect(dly);dly.connect(w);w.connect(M.master);}
+  M.padFilt=c.createBiquadFilter();M.padFilt.type='lowpass';M.padFilt.frequency.value=1100;M.padFilt.Q.value=0.5;
+  M.padGain=c.createGain();M.padGain.gain.value=0;M.padFilt.connect(M.padGain);M.padGain.connect(M.bus);
+  [146.83,174.61,220,293.66].forEach((f,k)=>{const o=c.createOscillator();o.type=k%2?'triangle':'sine';o.frequency.value=f;const g=c.createGain();g.gain.value=0.2;o.connect(g);g.connect(M.padFilt);o.start();const o2=c.createOscillator();o2.type='sine';o2.frequency.value=f*1.004;const g2=c.createGain();g2.gain.value=0.11;o2.connect(g2);g2.connect(M.padFilt);o2.start();o._d=o2;M.padOsc.push(o);});
+  M.sched=c.currentTime+0.1;}
+function thump(t0,v){const c=M.ctx;const o=c.createOscillator();o.type='sine';o.frequency.setValueAtTime(120,t0);o.frequency.exponentialRampToValueAtTime(46,t0+0.25);const g=c.createGain();g.gain.setValueAtTime(v,t0);g.gain.exponentialRampToValueAtTime(0.001,t0+0.42);o.connect(g);g.connect(M.master);o.start(t0);o.stop(t0+0.46);}
+function padChord(fr){if(!M.ctx)return;const now=M.ctx.currentTime;M.padOsc.forEach((o,k)=>{if(fr[k]!=null){o.frequency.setTargetAtTime(fr[k],now,0.5);if(o._d)o._d.frequency.setTargetAtTime(fr[k]*1.004,now,0.5);}});}
+function piano(t0,f,v,dur){const c=M.ctx;dur=dur||2.6;const g=c.createGain();g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(v,t0+0.02);g.gain.exponentialRampToValueAtTime(0.0008,t0+dur);const o=c.createOscillator();o.type='sine';o.frequency.value=f;const o2=c.createOscillator();o2.type='sine';o2.frequency.value=f*2.001;const g2=c.createGain();g2.gain.value=0.16;o.connect(g);o2.connect(g2);g2.connect(g);g.connect(M.bus);o.start(t0);o2.start(t0);o.stop(t0+dur+0.1);o2.stop(t0+dur+0.1);}
+function pianoChord(t0,fr,v){fr.forEach((f,k)=>piano(t0+k*0.09,f,v*0.7,3.4));}
+function subPulse(t0,v){const c=M.ctx;const o=c.createOscillator();o.type='sine';o.frequency.setValueAtTime(76,t0);o.frequency.exponentialRampToValueAtTime(44,t0+0.18);const g=c.createGain();g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(v,t0+0.02);g.gain.exponentialRampToValueAtTime(0.001,t0+0.5);o.connect(g);g.connect(M.master);o.start(t0);o.stop(t0+0.55);}
+// ── 卡農（Pachelbel Canon in D）：8 和弦地基循環（D–A–Bm–F#m–G–D–G–A）＋招牌旋律＋流動琶音，全片循環 ──
+const CANON_PAD=[[146.83,220.00,293.66,369.99],[164.81,220.00,277.18,329.63],[123.47,185.00,246.94,293.66],[138.59,185.00,277.18,329.63],[146.83,196.00,293.66,392.00],[146.83,220.00,293.66,369.99],[146.83,196.00,293.66,392.00],[164.81,220.00,277.18,329.63]];
+const CANON_BASS=[73.42,110.00,123.47,92.50,98.00,73.42,98.00,110.00];
+const CANON_MEL=[369.99,329.63,293.66,277.18,246.94,220.00,246.94,277.18];
+const CANON_ARP=[[293.66,369.99,440.00,587.33],[329.63,440.00,554.37,659.25],[293.66,369.99,493.88,587.33],[277.18,369.99,554.37,659.25],[293.66,392.00,493.88,587.33],[293.66,369.99,440.00,587.33],[293.66,392.00,493.88,587.33],[329.63,440.00,554.37,659.25]];
+function musicScene(i){if(!M.ctx)return;const now=M.ctx.currentTime;M.padFilt.frequency.setTargetAtTime(1500,now,0.9);M.padGain.gain.setTargetAtTime(0.115,now,1.2);} // 卡農：pad 穩定，和弦由 musicTick 依拍推進（不隨場景跳）
+function musicTick(){if(!M.ctx)return;const c=M.ctx;if(!playing)return;if(c.state==='suspended'){c.resume();return;}
+  while(M.sched<c.currentTime+0.2){const tt=M.sched,step=M.beat,ci=Math.floor(step/8)%8;
+    if(step%8===0){padChord(CANON_PAD[ci]);piano(tt,CANON_BASS[ci],0.115,2.3);piano(tt,CANON_MEL[ci],0.14,2.5);} // 每 2 秒換和弦：低音＋招牌下行旋律（力度加倍，旁白下仍聽得到）
+    if(step%2===0){const a=CANON_ARP[ci];piano(tt,a[(step/2)%4],0.065,0.9);} // 流動琶音
+    M.sched+=60/120/2;M.beat++;}}
+
+// ===== 旁白（多語言 + Dori 真人音檔）=====
+const LANG={
+ zh:{name:'中文',code:'zh-TW',
+  narr:[
+   '山苦瓜，下週會不會缺貨？——同事順口一問，我卻沒辦法馬上回答。',
+   '先到倉管，問庫存還有多少；再走到生管，問原料夠不夠。接著找採購，問下一批到貨；最後到品管，問檢驗報告好了沒。一句話，得跑四站。',
+   '想自己查？光是攤開庫存表、預估表、交期表、採購單、驗收紀錄、品檢記錄——六張表一張一張比對，一個下午就沒了。',
+   '更麻煩的是，同一個山苦瓜，ERP 顯示三百零二件，新得利顯示二百八十四件，差了十八件。到底該信哪一個？',
+   '天黑了，忙了一整天，我最放不下的還是——這個答案，真的對嗎？',
+   '而這，只是這週幾百個品項裡的其中一個。',
+   '那如果，有一位真正懂供應鏈的 AI 同事呢？同一句問題，它同時查完四個部門、六張表，還比對了 ERP 跟新得利——幾秒鐘，就把答案湊齊。',
+   '同事又來問。這次，AI 幾秒就給出答案——不會缺貨，差的十八件也查清楚了：是待驗收。他放心，我安心，共創雙贏。'],
+  q:'山苦瓜，下週會不會缺貨？',ans:'「不會。我幫你看過了。」',slogan:'隨問，隨答。',
+  depts:['倉管','生管','採購','品管'],tables:['庫存表','預估表','交期表','採購單','驗收紀錄','品檢記錄'],
+  s2:'一個問題，被切成<b style="color:#ff9a6a">四塊</b>。',
+  s3:'六張表，<b style="color:#ff9a6a">怎麼也對不完</b>。',
+  sA:'ERP 一個數，新得利另一個數。到底，<b style="color:#ff9a6a">信哪一個</b>？',
+  s4a:'忙了一整天。',s4b:'還是不確定——算得<b style="color:#ff9a6a">對不對</b>。<span class="cur"></span>',
+  sB:'而這，只是這週的<b style="color:#ff9a6a">其中一個</b>品項。',
+  s5:'<span style="color:#cfe0f5">如果……</span> 有一個<span style="color:#ffcf8a">「懂供應鏈的 AI 同事」</span>？'},
+ en:{name:'English',code:'en-US',
+  narr:[
+   "Bitter gourd — will we run out next week? A colleague asks in passing… and I can't answer on the spot.",
+   "First stop, Warehouse — how much stock is left? Then Planning — enough raw material? Next, Purchasing — when's the next batch? And finally QC — is the report ready? One question, four stops.",
+   "Sure, I could look it up myself — but just digging through the data means opening the stock sheet, the forecast, the lead-time sheet, purchase orders, receiving records, QC logs — six sheets, cross-checked one by one, a whole afternoon gone.",
+   "Worse still — for the same bitter gourd, ERP shows 302 pcs but the second system shows 284. An 18-piece gap. Which one do I trust?",
+   "Night falls. A whole day's work. And what I still can't shake is — is this answer even right?",
+   "And bitter gourd is just one of the hundreds of items I'm watching this week.",
+   "But what if you had an AI teammate who truly understood supply chain? One question — and it checks all four departments, all six sheets, and reconciles ERP against the second system, all at once. In seconds, it has the whole answer.",
+   "The colleague asks again. This time, the AI answers in seconds — no shortage, and the 18-piece gap is solved too: a pending-inspection batch. He's relieved; so am I. A win-win for everyone."],
+  q:'Bitter gourd — will we run out next week?',ans:'“No. I’ve already checked for you.”',slogan:'Ask anytime. Answered instantly.',
+  depts:['Warehouse','Planning','Purchasing','QC'],tables:['Stock','Forecast','Lead-time','PO','Receiving','QC log'],
+  s2:'One question, <b style="color:#ff9a6a">split four ways</b>.',
+  s3:'Six sheets that <b style="color:#ff9a6a">never reconcile</b>.',
+  sA:'ERP says one number, 新得利 another. <b style="color:#ff9a6a">Which do I trust</b>?',
+  s4a:"A whole day's work.",s4b:'Still not sure the numbers <b style="color:#ff9a6a">add up</b>.<span class="cur"></span>',
+  sB:'And this is just <b style="color:#ff9a6a">one item</b> this week.',
+  s5:'<span style="color:#cfe0f5">What if…</span> there were an <span style="color:#ffcf8a">AI that truly knows supply chain</span>?'},
+ ja:{name:'日本語',code:'ja-JP',
+  narr:[
+   'ゴーヤ、来週は欠品する？——同僚が軽く聞いてきた。でも私は、すぐには答えられない。',
+   'まず倉庫で、在庫はいくつか聞く。次に生産管理で、原料は足りるか。続いて購買で、次のロットはいつか。最後に品質管理で、検査報告はまだかと——ひとつの質問で、四か所も回る。',
+   'もちろん自分で調べてもいい。でも資料をめくるだけでも、在庫表、予測表、納期表、発注書、検収記録、品質検査記録——六枚の表を広げて、一枚ずつ照合して、午後がまるごと消える。',
+   '厄介なのは、同じゴーヤなのに、ERPは302個、新得利は284個——18個もずれていること。どちらを信じればいい？',
+   '日が暮れ、丸一日働いた。それでも引っかかるのは——この答え、本当に正しい？',
+   'そしてゴーヤは、今週見るべき数百の品目のひとつにすぎない。',
+   'もし、サプライチェーンを本当に理解したAIの同僚がいたら？ひとつの質問で、四つの部門と六枚の表を同時に確認し、ERPと新得利まで突き合わせる——数秒で、答えをすべて揃えてくれる。',
+   '同僚がまた聞きに来た。今度はAIが数秒で答える——欠品しません。差の18個も検収待ちだと突き止めた。彼も安心、私も安心、みんなにウィンウィンだ。'],
+  q:'ゴーヤ、来週は欠品する？',ans:'「いいえ。確認しておきました。」',slogan:'聞けば、すぐ答える。',
+  depts:['倉庫','生産','購買','品質'],tables:['在庫表','予測表','納期表','発注書','検収記録','品質検査'],
+  s2:'ひとつの質問が、<b style="color:#ff9a6a">四つに分かれる</b>。',
+  s3:'六枚の表が、<b style="color:#ff9a6a">どうしても合わない</b>。',
+  sA:'ERPとひとつ、新得利と別の数字。<b style="color:#ff9a6a">どっちを信じる</b>？',
+  s4a:'丸一日働いた。',s4b:'それでも確信が持てない——数字は<b style="color:#ff9a6a">合っているか</b>。<span class="cur"></span>',
+  sB:'これは、今週の<b style="color:#ff9a6a">ひとつの品目</b>にすぎない。',
+  s5:'<span style="color:#cfe0f5">もし……</span> <span style="color:#ffcf8a">「サプライチェーンを理解したAIの同僚」</span>がいたら？'}
+};
+LANG.dori=Object.assign({},LANG.zh,{name:'Dori 真人配音'});
+// 場景6「有憑據的答案卡＋CTA」與新標語 的多語文字
+const EV={
+ // v2（評審🔴1）：數字閉環——284=ERP302 剔除待驗收18 的可用量(ATP)，與第4段 302/284/差18 前後呼應；移除「數據為示意」
+ zh:{head:'不會，下週不會缺貨。',rows:[['可用庫存(已驗收)','284 pcs'],['至 8/12 需求','210 pcs'],['下一批到貨','8/12'],['差 18 pcs 原因','待驗收批次']],src:'資料來源：ERP＋新得利倉庫系統｜更新 09:14',slogan:'答案快，更要答得有據。',cta:'▸ 選 3 個高頻問題，做兩週 PoC'},
+ en:{head:"No — you won't run out next week.",rows:[['On-hand (inspected)','284'],['Demand by Aug 12','210'],['Next arrival','Aug 12'],['18-pc gap','pending QC']],src:'Source: ERP + warehouse system · updated 09:14',slogan:'Fast answers — with the receipts.',cta:'▸ Pick 3 top questions — 2-week PoC'},
+ ja:{head:'いいえ、来週は欠品しません。',rows:[['在庫(検収済)','284 個'],['8/12までの需要','210 個'],['次回入荷','8/12'],['差18個の原因','検収待ち']],src:'出典：ERP＋新得利倉庫システム｜更新 09:14',slogan:'速く、そして根拠のある答えを。',cta:'▸ 高頻度の3問で2週間PoC'},
+ dori:null
+};
+function applyEvid(code){const e=EV[code]||EV.zh; // dori→null→用 zh
+  const set=(id,tx)=>{const el=$(id);if(el)el.textContent=tx;};
+  set('ask6',(LANG[code]||LANG.zh).q);set('ansHead',e.head);set('esrc',e.src);set('slogan',e.slogan);set('ctatext',e.cta);
+  e.rows.forEach((r,k)=>{set('ek'+k,r[0]);set('ev'+k,r[1]);});}
+delete LANG.dori; // chibi 版旁白已重寫新稿，Dori 舊錄音對不上，改用系統中文 TTS
+let lang='zh',L=LANG[lang];
+let NARR=L.narr;
+const N={on:true,active:false,voice:null,pending:null,guard:null,poll:null,cur:null,curClip:null,sup:('speechSynthesis' in window)};
+const VO=[];for(let _i=0;_i<8;_i++){const a=new Audio();a.preload='none';VO.push(a);} // Dori 已停用，不預載音檔（保留陣列避免其他引用出錯）
+// 統一背景樂：從其中一段影片抽出的音樂（audio/bgm.mp3），全片循環播放、旁白時壓低、可靜音
+const BGM=new Audio('audio/bgm.mp3');BGM.loop=true;BGM.preload='none';const bgmBase=0.55;let bgmFadeT=null; // 目前用內建合成配樂，bgm 不預載；要改用 bgm 時把 musicOn 設 true 即可
+let musicOn=false; // 改回內建合成配樂，不用影片抽出的 bgm.mp3（保留檔案備用）
+try{BGM.volume=0;}catch(e){}
+BGM.addEventListener('error',()=>{BGM.dataset.bad='1';});
+function bgmGo(reset){if(!musicOn||BGM.dataset.bad)return;if(bgmFadeT){clearInterval(bgmFadeT);bgmFadeT=null;}try{if(reset)BGM.currentTime=0;const p=BGM.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}duck();}
+function bgmStop(){if(bgmFadeT)clearInterval(bgmFadeT);bgmFadeT=setInterval(()=>{let v=(BGM.volume||0)-0.05;if(v<=0.01){v=0;try{BGM.pause();}catch(e){}clearInterval(bgmFadeT);bgmFadeT=null;}try{BGM.volume=v;}catch(e){}},70);}
+function bgmPause(){if(bgmFadeT){clearInterval(bgmFadeT);bgmFadeT=null;}try{BGM.pause();}catch(e){}}
+const NARR_ZH=LANG.zh.narr;
+const _frac=(txt,names)=>names.map(n=>{const idx=txt.indexOf(n);return idx<0?1:idx/txt.length;});
+const VO2FRAC=_frac(NARR_ZH[1],DEPTS);
+const VO3FRAC=_frac(NARR_ZH[2],LBL);
+function useVO(i){return N.on&&lang==='dori'&&VO[i]&&!VO[i].error;}
+function playClip(i){const a=VO[i];if(!a){if(N.sup)doSpeak(i);return;}N.curClip=a;N.active=true;duck();
+  try{a.currentTime=0;a.playbackRate=speed;}catch(e){}
+  a._rz=0;
+  clearTimeout(N.guard);N.guard=setTimeout(()=>{if(N.curClip===a){N.active=false;duck();}},40000);
+  a.onended=()=>{if(N.curClip!==a)return;if(a.duration&&a.currentTime<a.duration-0.6&&(a._rz=a._rz+1)<=3){const pp=a.play();if(pp&&pp.catch)pp.catch(()=>{});return;} clearTimeout(N.guard);N.active=false;duck();};
+  a.onerror=()=>{if(N.curClip===a){N.curClip=null;clearTimeout(N.guard);if(N.sup)doSpeak(i);else{N.active=false;duck();}}};
+  const p=a.play();if(p&&p.catch)p.catch(()=>{});}
+function allVoices(){return N.sup?speechSynthesis.getVoices():[];}
+function pickVoice(){if(!N.sup)return;const all=allVoices();const rx=new RegExp('^'+(lang==='dori'?'zh':lang),'i');const full=L.code.toLowerCase().replace('_','-');
+  const vs=all.filter(v=>rx.test(v.lang));
+  const exact=vs.filter(v=>v.lang.toLowerCase().replace('_','-')===full);const pool=exact.length?exact:vs;
+  N.voice=pool.find(v=>/natural|neural|online|hsiaochen|hsiaoyu|xiaoxiao|xiaoyi|yunxi|yunjian|yunyang|曉|雲/i.test(v.name))||pool.find(v=>/google/i.test(v.name))||pool.find(v=>!/hanhan|zhiwei|haohao/i.test(v.name))||pool[0]||vs[0]||null;} // 優先神經網路語音（Edge 的 HsiaoChen/Xiaoxiao 等最自然），避開最生硬的 HanHan
+function applyLang(code){if(!LANG[code])return;lang=code;L=LANG[code];NARR=L.narr;
+  const set=(id,html)=>{const el=$(id);if(el)el.innerHTML=html;};
+  set('s2line',L.s2);set('s3line',L.s3);set('sAline',L.sA);set('s4a',L.s4a);set('s4b',L.s4b);set('sBline',L.sB);set('s5line',L.s5);
+  applyEvid(code); // 場景6 證據卡＋CTA＋新標語
+  {const mk=({zh:['👤 同事','🤖 AI 同事'],en:['👤 Colleague','🤖 AI'],ja:['👤 同僚','🤖 AI']})[code]||['👤 同事','🤖 AI 同事'];const m1=$('mark1'),m7=$('mark7');if(m1)m1.textContent=mk[0];if(m7)m7.textContent=mk[1];} // 角色標記多語
+  if(scriptShown())buildTranscript(); // 逐字稿開著→換語言重建
+  deptEls.forEach((el,k)=>{if(L.depts[k])el.textContent=L.depts[k];});
+  lblEls.forEach((el,k)=>{if(L.tables[k])el.textContent=L.tables[k];});
+  const a=$('langSel'),b=$('langSel0');if(a)a.value=code;if(b)b.value=code;
+  pickVoice();
+  if(typeof syncSpeedBtn==='function')syncSpeedBtn();
+  if(started)speak(sceneAt(t));}
+function buildLangSel(){['langSel','langSel0'].forEach(id=>{const sel=$(id);if(!sel)return;sel.innerHTML='';Object.keys(LANG).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent='🌐 '+LANG[k].name;sel.appendChild(o);});sel.value=lang;});}
+if(N.sup){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}
+buildLangSel();
+applyEvid(lang); // 初始化場景6證據卡文字（預設 dori→中文）
+// 逐字稿面板：列出目前語言的 8 段旁白，可點/按 Enter 跳段，播放中高亮當前段
+function buildTranscript(){const b=$('trbody');if(!b)return;b.innerHTML='';(L.narr||[]).forEach((tx,i)=>{const d=document.createElement('div');d.className='trline';d.tabIndex=0;d.dataset.i=i;d.innerHTML='<b>'+(i+1)+'.</b>'+tx;const go=ev=>{ev.stopPropagation();jumpTo(i);};d.addEventListener('click',go);d.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();go(ev);}});b.appendChild(d);});highlightTranscript(sceneAt(t));}
+function highlightTranscript(i){const b=$('trbody');if(!b)return;for(const c of b.children)c.classList.toggle('cur',+c.dataset.i===i);}
+function scriptShown(){const e=$('transcript');return !!(e&&e.classList.contains('show'));}
+function duck(){const ducking=(N.on&&N.active);
+  if(M.master){const tgt=M.muted?0:(ducking?M.vol*0.5:M.vol);try{M.master.gain.setTargetAtTime(tgt,M.ctx.currentTime,0.12);}catch(e){M.master.gain.value=tgt;}} // 旁白時只壓到 50%，卡農不會消失
+  if(!bgmFadeT){try{BGM.volume=M.muted?0:(ducking?bgmBase*0.42:bgmBase);}catch(e){}}} // 旁白時背景樂壓到 42%（約 0.23），旁白空檔回滿 0.55
+function stopNarr(){clearTimeout(N.pending);clearTimeout(N.guard);clearInterval(N.poll);N.cur=null;
+  if(N.curClip){try{N.curClip.pause();N.curClip.onended=N.curClip.onerror=null;}catch(e){}N.curClip=null;}
+  if(N.sup)speechSynthesis.cancel();N.active=false;duck();}
+function doSpeak(i){const txt=NARR[i];if(!txt)return;
+  const parts=[];(txt.match(/[^。．.！!？?]+[。．.！!？?]?/g)||[txt]).forEach(function(seg){seg=seg.trim();if(!seg)return;if(seg.length<=42){parts.push(seg);}else{(seg.match(/[^、，,；;：—]+[、，,；;：—]*/g)||[seg]).forEach(function(s){s=s.trim();if(s)parts.push(s);});}});
+  const token={};N.cur=token;let idx=0;
+  const next=()=>{if(N.cur!==token)return;clearTimeout(N.guard);if(idx>=parts.length){if(i===2)lblShown.fill(1);if(i===1)qTarget=3;N.active=false;duck();return;}
+    const chunk=parts[idx++];let spk=chunk;if(/^zh/i.test(L.code))spk=spk.replace(/AI/g,'A I');
+    if(i===2)for(let k=0;k<LBL.length;k++){if(chunk.indexOf(LBL[k])>=0||(L.tables[k]&&chunk.toLowerCase().indexOf(L.tables[k].toLowerCase())>=0))lblShown[k]=1;}
+    if(i===1)for(let k=0;k<DEPTS.length;k++){if(chunk.indexOf(DEPTS[k])>=0||(L.depts[k]&&chunk.toLowerCase().indexOf(L.depts[k].toLowerCase())>=0))qTarget=k;}
+    const u=new SpeechSynthesisUtterance(spk);if(N.voice)u.voice=N.voice;u.lang=L.code;u.rate=clamp((i===1?1.08:(i<=3?0.96:1.0))*speed,0.5,3);u.pitch=1.05;u.volume=1; // 第二段語速略快，貼齊影片長度
+    u.onend=u.onerror=()=>{if(N.cur===token)next();};
+    N.guard=setTimeout(()=>{if(N.cur===token){if(i===2)lblShown.fill(1);N.active=false;duck();}},14000); // v2：TTS 卡死時第3段表卡兜底全亮
+    try{speechSynthesis.speak(u);}catch(e){next();}};
+  next();}
+function speak(i){stopNarr();if(!N.on)return;
+  if(useVO(i)){N.active=true;duck();N.pending=setTimeout(()=>playClip(i),300);return;}
+  if(!N.sup)return;const txt=NARR[i];if(!txt)return;N.active=true;duck();N.pending=setTimeout(()=>doSpeak(i),450);}
+function speakNow(i){if(!N.on)return;stopNarr();
+  if(useVO(i)){N.active=true;duck();playClip(i);return;}
+  if(!N.sup)return;const txt=NARR[i];if(!txt)return;N.active=true;duck();doSpeak(i);}
+
+function sceneAt(tt){for(let i=0;i<DUR.length;i++){if(tt<B[i+1]-1e-6)return i;}return DUR.length-1;}
+let curScene=-1;
+const SCENES=[...document.querySelectorAll('.scene')];
+function onEnter(i){
+  if(i===0){$('clock').textContent='09:14';}
+  if(i===4){$('clock').textContent='21:47';}
+  if(i===2)lblShown.fill(0);
+  if(i===1)qTarget=-1;
+  {const v=VIDS[i];vidPassed=!(v&&!v.dataset.bad);} // 進新幕：重置影片播完旗標（沒影片就當已完成）
+  playVid(i);musicScene(i);if(playing)speak(i); // 暫停時不自動起旁白/播放（修暫停被破壞的 bug）
+}
+function sceneOpacity(i){const s=B[i],e=B[i+1];
+  let inn=(i===0)?smooth(t/1.0):smooth((t-s)/FADE);
+  let out=(i===DUR.length-1)?1:(1-smooth((t-(e-FADE))/FADE));
+  return clamp(inn*out,0,1);}
+function render(){
+  const i=sceneAt(t);
+  if(i!==curScene){curScene=i;if(started)onEnter(i);}
+  {const cv=VIDS[i];if(!vidPassed&&cv&&!cv.dataset.bad&&cv.duration>0.5&&cv.currentTime>=cv.duration-0.5)vidPassed=true;} // 影片播到接近尾端＝完成一輪
+  if(scriptShown())highlightTranscript(i);
+  for(let k=0;k<SCENES.length;k++)SCENES[k].style.opacity=sceneOpacity(k).toFixed(3);
+  const ls=t-B[i];
+  // 影片播完不再乾停：定格畫面緩慢推近（Ken Burns），旁白唸完前畫面持續有動感
+  {const cv=VIDS[i];if(cv&&!cv.dataset.bad){cv.style.opacity=1;
+    if(cv.ended){if(!cv._kb)cv._kb=segElapsed;const z=1+0.1*Math.min(1,(segElapsed-cv._kb)/9);cv.style.transform='scale('+z.toFixed(4)+')';}
+    else{cv._kb=0;if(cv.style.transform)cv.style.transform='';}}}
+  if(N.on&&lang==='dori'&&i===1&&VO[1]&&!VO[1].paused){const d=VO[1].duration||0,ct=VO[1].currentTime;
+    if(d)for(let k=DEPTS.length-1;k>=0;k--){if(ct>=VO2FRAC[k]*d){qTarget=k;break;}}}
+  if(N.on&&lang==='dori'&&i===2&&VO[2]&&!VO[2].paused){const d=VO[2].duration||0,ct=VO[2].currentTime;if(d)for(let k=0;k<LBL.length;k++)if(ct>=VO3FRAC[k]*d)lblShown[k]=1;}
+
+  $('darkness').style.opacity=pw(B,[0,0.02,0.06,0.12,0.18,0.12,0.02,0,0]).toFixed(3);
+  $('clock').textContent=(i>=4)?'21:47':'09:14';
+  $('clock').style.opacity=(((i===0)?smooth((ls-0.3)/1):(i===4)?smooth(ls/0.4):0)*sceneOpacity(i)).toFixed(3);
+
+  // 場景1：問句字幕＋「同事」標記等影片裡同事現身(約2.3s)才彈出
+  {typeInto($('q1'),L.q,0.25,12,ls,true); // v2：0.25s 就開始打字，前4秒鉤子直接立住
+   $('mark1').classList.toggle('show',i===0&&!!VIDS[0]&&VIDS[0].currentTime>=2.3);}
+  // 場景7：「AI 同事」標記等機器人降下(約2.1s)才彈出
+  {const v7t=(VIDS[6]&&VIDS[6].currentTime)||0;$('mark7').classList.toggle('show',i===6&&v7t>=1.3&&v7t<=7.2);} // 新 v7：機器人1.3s到位；7.2s後讓位給頭上的大燈泡
+  // 場景2：哲人逐站詢問——標記跟著鏡頭裡的人物頭頂移動；每站問完哲人頭上亮 💡 再去下一站（依影片時間驅動，名字必對到人）
+  {const vt=(VIDS[1]&&VIDS[1].currentTime)||0;
+   deptEls.forEach((el,k)=>{const c=CHIP_T[k];const p=clamp((vt-c.t0)/(c.tx-c.t0),0,1);const x=c.x0+(c.x1-c.x0)*p;
+     const on=(i===1&&vt>=c.t0&&vt<=c.t1&&x>49.2); // 主角碰到標記(滑到他右緣49%)→標記就此消失，不再從另一側出現
+     if(on){el.style.left=x.toFixed(1)+'%';el.style.top=c.top+'%';}
+     el.classList.toggle('lit',on);});
+   $('bulb').classList.toggle('on',i===1&&BULB_T.some(w=>vt>=w[0]&&vt<=w[1]));
+   $('s2line').parentElement.style.opacity=smooth((ls-1.0)/1.0).toFixed(3);}
+  // 場景3：表名紙卡依序浮現＋結尾時鐘快轉（呼應「一個下午就沒了」）
+  {lblEls.forEach((el,k)=>{el.classList.toggle('on',!!lblShown[k]||smooth((ls-LBL_AT[k]*(N.on?1.9:1))/0.7)>0.5);}); // v2（評審🔴5）：TTS 驅動 OR 時間備援取聯集，TTS 靜默失敗表卡也照出
+   $('s3line').parentElement.style.opacity=Math.max(N.on&&lblShown.every(Boolean)?1:0,smooth((ls-(N.on?9.5:5.0))/1.0)).toFixed(3);
+   $('fastclock').style.opacity=(i===2)?smooth((segElapsed-0.62*estDur(2))/0.8).toFixed(3):0;}
+  // 場景A：依旁白節奏依序亮：ERP 302(左上放大)→新得利 284(右上)→中間深色「差18」
+  {$('sAline').parentElement.style.opacity=smooth((ls-1.4)/1.0).toFixed(3);
+   const ed=estDur(3);
+   if(erpCol)erpCol.classList.toggle('on',i===3&&segElapsed>=0.30*ed);
+   if(xdlCol)xdlCol.classList.toggle('on',i===3&&segElapsed>=0.52*ed);
+   if(diffEl)diffEl.classList.toggle('on',i===3&&segElapsed>=0.70*ed);}
+  // 場景6：有憑據的答案卡→標語→CTA，依 segElapsed 推進（不受末幕 ls 上限限制，鋪滿整段並定格保留）
+  {const k=N.on?1:0.5,p=segElapsed; // 對齊第八段劇情（短版旁白~11s）：同事再問→AI 秒答(卡片亮,對上「不會缺貨」特寫~7s)→標語；CTA 已移除
+   $('anscard').style.opacity=smooth((p-6.8*k)/0.8).toFixed(3);
+   $('evid').style.opacity=smooth((p-7.6*k)/0.9).toFixed(3);
+   $('evid').classList.toggle('on',i===7&&p>=7.6*k); // v2：證據四格逐格彈出（間隔0.3s），來源列最後亮
+   $('slogan').style.opacity=smooth((p-11*k)/0.9).toFixed(3);}
+
+  if(tlPhasesEl){const ch=tlPhasesEl.children;const af=N.on?clamp(segElapsed/estDur(i),0,1):clamp((t-B[i])/DUR[i],0,1);for(let j=0;j<ch.length;j++){ch[j].classList.toggle('active',j===i);ch[j].classList.toggle('done',j<i);ch[j].querySelector('.pb i').style.width=(j<i?100:(j===i?af*100:0))+'%';}
+    if(bp2)bp2.textContent=(playing&&t<TOTAL)?'⏸ 暫停':'▶ 播放';}
+}
+
+let segElapsed=0,segActive=-1;
+let vidPassed=false; // 本幕影片是否已至少完整播過一輪（用來決定換場時機）
+function estDur(j){if(!N.on)return DUR[j];if(VO[j]&&VO[j].duration)return Math.max(DUR[j],VO[j].duration);const n=(NARR[j]||'').length;return Math.max(DUR[j],n*0.3+1.5);} // 估長放寬（貼近實際中文 TTS 含停頓），讓影片鋪滿旁白
+function loop(now){
+  if(!lastTs)lastTs=now;let dt=(now-lastTs)/1000;lastTs=now;if(dt>0.1)dt=0.1;
+  const rawDt=dt;dt*=speed;
+  checkLayout();
+  if(started&&playing){
+    const ci=sceneAt(t);let nt=t+dt;
+    const hp=B[ci+1]-FADE-0.05;
+    const holdNarr=(N.on&&N.active); // 旁白還沒唸完
+    const holdVid=(ci===5&&!vidPassed&&segElapsed<12); // 只有第六段(sB/v6)等影片播到綠箱才換場；其餘段靠放慢影片避免提早播完，旁白結束就換場
+    const hold=holdNarr||holdVid;
+    if(hold&&ci<DUR.length-1&&nt>=hp)nt=Math.min(nt,hp);
+    if(hold&&nt>=TOTAL)nt=Math.min(nt,TOTAL-0.01);
+    t=nt;if(t>=TOTAL){t=TOTAL;playing=false;bgmStop();try{if(M.padGain)M.padGain.gain.setTargetAtTime(0,M.ctx.currentTime,0.7);if(M.master&&!M.muted)M.master.gain.setTargetAtTime(M.vol*0.12,M.ctx.currentTime,1.0);}catch(e){}} // 片尾音樂淡出，不留無限嗡鳴
+    const cs=sceneAt(t);if(cs!==segActive){segActive=cs;segElapsed=0;}segElapsed+=rawDt;
+  }
+  if(started){render();musicTick();}
+  requestAnimationFrame(loop);
+}
+
+let uiT;
+function pokeUI(){const b=$('bottomUI');if(!b)return;b.classList.remove('hideui');clearTimeout(uiT);if(started&&playing)uiT=setTimeout(()=>{if(started&&playing)b.classList.add('hideui');},2600);} // 播放中無操作 2.6s 後自動隱藏控制列
+addEventListener('pointermove',pokeUI);addEventListener('keydown',pokeUI);
+function begin(){started=true;playing=true;t=0;lastTs=0;curScene=0;$('start').classList.add('hide');$('bottomUI').classList.add('show');document.body.classList.add('cine');initAudio();unlockAudio();bgmGo(true);playVid(0);musicScene(0);speakNow(0);pokeUI();} // 不再自動強制全螢幕
+function unlockAudio(){try{if(M.ctx&&M.ctx.state==='suspended')M.ctx.resume();}catch(e){}}
+function nextScene(){if(!started)return;for(let i=1;i<B.length;i++){if(B[i]>t+0.05){t=B[i];if(t>=TOTAL){t=TOTAL;playing=false;}return;}}t=TOTAL;playing=false;}
+function replay(){if(!started){begin();return;}t=0;playing=true;lastTs=0;curScene=-1;stopNarr();bgmGo(true);}
+function toggle(){if(!started)return;if(t>=TOTAL){replay();return;}playing=!playing;
+  if(!playing){
+    if(N.curClip&&!N.curClip.paused){clearTimeout(N.pending);clearTimeout(N.guard);N.curClip.pause();}
+    else stopNarr();
+    pauseAllVids();bgmPause();
+    try{if(M.ctx)M.ctx.suspend();}catch(e){}}
+  else{
+    try{if(M.ctx)M.ctx.resume();}catch(e){}
+    bgmGo(false);resumeVid(sceneAt(t));
+    if(N.curClip&&N.curClip.paused&&!N.curClip.ended){N.active=true;duck();const p=N.curClip.play();if(p&&p.catch)p.catch(()=>{});}
+    else if(N.on)speak(sceneAt(t));}}
+$('playBtn').addEventListener('click',e=>{e.stopPropagation();begin();});
+stage.addEventListener('click',e=>{if(!started)return;if(e.target.id==='playBtn')return;if(e.target.closest&&e.target.closest('#bottomUI'))return;nextScene();});
+['click','mousedown'].forEach(ev=>$('bottomUI').addEventListener(ev,e=>e.stopPropagation()));
+addEventListener('keydown',e=>{
+  const tn=e.target&&e.target.tagName;if(tn==='SELECT'||tn==='INPUT'||tn==='TEXTAREA')return;
+  if(e.code==='Space'){e.preventDefault();started?toggle():begin();}
+  else if(e.code==='ArrowRight'){e.preventDefault();nextScene();}
+  else if(e.key==='r'||e.key==='R'){e.preventDefault();replay();}
+  else if(e.key==='m'||e.key==='M'){$('btnMute2').click();}
+  else if(e.key==='n'||e.key==='N'){$('btnNarr2').click();}
+  else if(e.key==='s'||e.key==='S'){$('btnScript').click();}
+});
+const PHN=['一句話的問題','被切成四塊','被表淹沒','數字打架','深夜不確定','不只一個品項','一抹希望','隨問隨答'];
+const tlPhasesEl=$('tlPhases');
+const bp2=$('btnPlay2');
+let speed=1;const SPEEDS=[1,1.25,1.5,2,0.5];let si=0;
+PHN.forEach((nm,i)=>{const d=document.createElement('div');d.className='ph';d.innerHTML='<div class="dot"></div><div class="pn">'+(i+1)+'. '+nm+'</div><div class="pb"><i></i></div>';d.addEventListener('click',e=>{e.stopPropagation();jumpTo(i);});tlPhasesEl.appendChild(d);});
+function jumpTo(i){const wp=started?playing:true;if(!started){begin();}i=clamp(i,0,DUR.length-1);t=B[i];curScene=-1;playing=wp;lastTs=0;stopNarr();render();}
+$('btnPrev').addEventListener('click',e=>{e.stopPropagation();jumpTo(sceneAt(t)-1);});
+$('btnNext2').addEventListener('click',e=>{e.stopPropagation();jumpTo(sceneAt(t)+1);});
+bp2.addEventListener('click',e=>{e.stopPropagation();started?toggle():begin();});
+$('btnReplay2').addEventListener('click',e=>{e.stopPropagation();replay();});
+$('btnSpeed').addEventListener('click',e=>{e.stopPropagation();si=(si+1)%SPEEDS.length;speed=SPEEDS[si];VO.forEach(a=>{try{a.playbackRate=speed;}catch(_){}});VIDS.forEach((v,k)=>{try{v.playbackRate=sceneFillRate(k)*speed;}catch(_){}});$('btnSpeed').textContent='速度 ×'+speed;}); // TTS 變速：每段旁白 chunk 在 doSpeak 依當下 speed 設 u.rate
+function syncSpeedBtn(){const bs=$('btnSpeed');if(!bs)return;bs.disabled=false;bs.style.opacity='';bs.title='調整播放速度（旁白＋影片同步變速）';}
+syncSpeedBtn();
+$('btnMute2').addEventListener('click',e=>{e.stopPropagation();if(!M.ctx)initAudio();M.muted=!M.muted;duck();$('btnMute2').textContent=M.muted?'🔇 靜音':'🔊 音樂';$('btnMute2').classList.toggle('on',!M.muted);$('btnMute2').setAttribute('aria-pressed',!M.muted);});
+$('btnNarr2').addEventListener('click',e=>{e.stopPropagation();N.on=!N.on;if(!N.on)stopNarr();else if(started)speak(sceneAt(t));$('btnNarr2').textContent=N.on?'🗣 旁白':'🤐 旁白關';$('btnNarr2').classList.toggle('on',N.on);$('btnNarr2').setAttribute('aria-pressed',N.on);syncSpeedBtn();});
+$('btnScript').addEventListener('click',e=>{e.stopPropagation();const on=!scriptShown();$('transcript').classList.toggle('show',on);$('btnScript').setAttribute('aria-pressed',on);$('btnScript').classList.toggle('on',on);if(on)buildTranscript();});
+$('stayPortrait').addEventListener('click',e=>{e.stopPropagation();$('rotate').classList.add('dismissed');});
+['langSel','langSel0'].forEach(id=>{const el=$(id);if(el)el.addEventListener('change',e=>{e.stopPropagation();applyLang(e.target.value);});});
+['styleSel','styleSel0'].forEach(id=>{const el=$(id);if(el)el.addEventListener('change',e=>{e.stopPropagation();if(!M.ctx)initAudio();applyStyle(e.target.value);});});
+
+window.__seek=x=>{started=true;playing=false;$('start').classList.add('hide');document.body.classList.add('cine');t=clamp(x,0,TOTAL);curScene=-1;const i=sceneAt(t);curScene=i;playVid(i);render();};
+window.__t=()=>t;
+checkLayout();render();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
