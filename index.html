@@ -39,9 +39,9 @@
   #s5 .cap{background:rgba(16,48,46,.82);} #s5 .cap::after{border-bottom-color:rgba(16,48,46,.82);} /* AI 希望＝青框 */
   /* v2（評審🔴3+6）：恢復開場鉤子與核心主張兩張字卡；其餘字幕維持隱藏 */
   #s1 .cap,#s5 .cap{display:inline-block;}
-  #s1 .cap::after{display:none;} /* 問句在上方置中，朝上尾巴沒有指向對象，關掉 */
-  #s1 .lower{bottom:auto;top:13%;} /* 鉤子問句移上方置中 */
-  #s1 .big{font-size:min(4.6vw,5.4vh);}
+  #s1 .cap::after{display:none;} /* 問句置底，朝上尾巴不指向特定對象，關掉 */
+  /* IP版：公仔的臉在畫面上半部，問句移回下方置中，不遮臉 */
+  #s1 .big{font-size:min(4.2vw,5vh);}
   .cur{display:inline-block;width:.08em;height:1em;background:currentColor;margin-left:.06em;vertical-align:-0.12em;animation:blink 1s steps(1) infinite;}
   @keyframes blink{50%{opacity:0;}}
   #clock{position:absolute;right:6%;top:11%;font-family:"Consolas",monospace;z-index:7;
@@ -388,7 +388,7 @@ const LANG={
    '山苦瓜，下週會不會缺貨？——同事順口一問，我卻沒辦法馬上回答。',
    '先到倉管，問庫存還有多少；再走到生管，問原料夠不夠。接著找採購，問下一批到貨；最後到品管，問檢驗報告好了沒。一句話，得跑四站。',
    '想自己查？光是攤開庫存表、預估表、交期表、採購單、驗收紀錄、品檢記錄——六張表一張一張比對，一整天就沒了。',
-   '更麻煩的是，同一個山苦瓜，ERP 顯示三百零二件，新得利顯示二百八十四件，差了十八件。到底該信哪一個？',
+   '更麻煩的是，同一個山苦瓜，ERP 顯示三百零二件，新得利顯示二百八十四件，差了十八件。到底問題出在哪邊？',
    '天黑了，人都走光了，我最放不下的還是——這個答案，真的對嗎？',
    '而這，只是這週幾百個品項裡的其中一個。',
    '那如果，有一位真正懂供應鏈的 AI 同事呢？同一句問題，它同時查完四個部門、六張表，還比對了 ERP 跟新得利——幾秒鐘，就把答案湊齊。',
@@ -406,7 +406,7 @@ const LANG={
    "Bitter gourd — will we run out next week? A colleague asks in passing… and I can't answer on the spot.",
    "First stop, Warehouse — how much stock is left? Then Planning — enough raw material? Next, Purchasing — when's the next batch? And finally QC — is the report ready? One question, four stops.",
    "Sure, I could look it up myself — but just digging through the data means opening the stock sheet, the forecast, the lead-time sheet, purchase orders, receiving records, QC logs — six sheets, cross-checked one by one, a whole day gone.",
-   "Worse still — for the same bitter gourd, ERP shows 302 pcs but the second system shows 284. An 18-piece gap. Which one do I trust?",
+   "Worse still — for the same bitter gourd, ERP shows 302 pcs but the second system shows 284. An 18-piece gap. Where exactly is the problem?",
    "Night falls. Everyone else has gone home. And what I still can't shake is — is this answer even right?",
    "And bitter gourd is just one of the hundreds of items I'm watching this week.",
    "But what if you had an AI teammate who truly understood supply chain? One question — and it checks all four departments, all six sheets, and reconciles ERP against the second system, all at once. In seconds, it has the whole answer.",
@@ -424,7 +424,7 @@ const LANG={
    'ゴーヤ、来週は欠品する？——同僚が軽く聞いてきた。でも私は、すぐには答えられない。',
    'まず倉庫で、在庫はいくつか聞く。次に生産管理で、原料は足りるか。続いて購買で、次のロットはいつか。最後に品質管理で、検査報告はまだかと——ひとつの質問で、四か所も回る。',
    'もちろん自分で調べてもいい。でも資料をめくるだけでも、在庫表、予測表、納期表、発注書、検収記録、品質検査記録——六枚の表を広げて、一枚ずつ照合して、一日がまるごと消える。',
-   '厄介なのは、同じゴーヤなのに、ERPは302個、新得利は284個——18個もずれていること。どちらを信じればいい？',
+   '厄介なのは、同じゴーヤなのに、ERPは302個、新得利は284個——18個もずれていること。いったい、どこに問題があるのか？',
    '夜が更けて、みんな帰ってしまった。それでも引っかかるのは——この答え、本当に正しい？',
    'そしてゴーヤは、今週見るべき数百の品目のひとつにすぎない。',
    'もし、サプライチェーンを本当に理解したAIの同僚がいたら？ひとつの質問で、四つの部門と六枚の表を同時に確認し、ERPと新得利まで突き合わせる——数秒で、答えをすべて揃えてくれる。',
