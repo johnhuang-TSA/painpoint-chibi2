@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>最簡單的問題，最難的答案｜Q 版公仔真人化 v2</title>
+<title>最簡單的問題，最難的答案｜IP 公仔版 v2</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;}
   html,body{width:100%;height:100%;overflow:hidden;background:#000;
@@ -14,7 +14,7 @@
 
   .scene{position:absolute;inset:0;opacity:0;will-change:opacity;overflow:hidden;}
   .vfallback{position:absolute;inset:0;}
-  .vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;will-change:transform;transform-origin:50% 42%;} /* 定格後緩慢推近的縮放原點（略偏上，對準角色） */
+  .vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;will-change:transform;transform-origin:50% 42%;transition:filter 1.2s;} /* 定格後緩慢推近；第3段定格會變暗襯托時鐘 */
   /* 各幕退回底色（影片沒載入時的 fallback 心情色） */
   #s1 .vfallback{background:linear-gradient(180deg,#3a5f8a,#9fc4e8 60%,#cfe0d0);}
   #s2 .vfallback{background:linear-gradient(180deg,#3f4a74,#8a5f7e 55%,#e0a060);}
@@ -39,8 +39,8 @@
   #s5 .cap{background:rgba(16,48,46,.82);} #s5 .cap::after{border-bottom-color:rgba(16,48,46,.82);} /* AI 希望＝青框 */
   /* v2（評審🔴3+6）：恢復開場鉤子與核心主張兩張字卡；其餘字幕維持隱藏 */
   #s1 .cap,#s5 .cap{display:inline-block;}
-  #s1 .cap::after{display:none;} /* 問句移到上方後，朝上尾巴沒有指向對象，關掉 */
-  #s1 .lower{bottom:auto;top:13%;} /* 鉤子問句移上方置中，評審注意力最高的前4秒直接看到問題 */
+  #s1 .cap::after{display:none;} /* 問句在上方置中，朝上尾巴沒有指向對象，關掉 */
+  #s1 .lower{bottom:auto;top:13%;} /* 鉤子問句移上方置中 */
   #s1 .big{font-size:min(4.6vw,5.4vh);}
   .cur{display:inline-block;width:.08em;height:1em;background:currentColor;margin-left:.06em;vertical-align:-0.12em;animation:blink 1s steps(1) infinite;}
   @keyframes blink{50%{opacity:0;}}
@@ -53,28 +53,32 @@
   .charmark::after{content:"";position:absolute;left:50%;bottom:-0.48em;transform:translateX(-50%);border:0.48em solid transparent;border-top-color:#dbe8ff;border-bottom:0;}
   .charmark.ai{background:linear-gradient(180deg,#dffff6,#79e6cf);border-color:#eafffb;color:#043a2f;}
   .charmark.ai::after{border-top-color:#79e6cf;}
-  #mark1{top:11%;right:20%;} /* 場景1：同事在右（頭頂約x74%/y20%，標記緊貼頭上） */
-  #mark7{top:7%;right:13%;} /* 場景7：AI 機器人在右 */
+  #mark1{top:10%;right:26%;} /* 場景1（IP版）：同事在右側桌邊，頭頂約x67%/y22% */
+  #mark7{top:17%;right:20%;} /* 場景7（IP版）：機器人在右，頭頂約x74%/y28% */
 
   /* 場景2：部門標記跟著鏡頭裡的人物頭頂移動（位置由 JS 依影片時間驅動），哲人每站問完亮燈泡 */
   #deptStrip{position:absolute;inset:0;z-index:6;pointer-events:none;
-    -webkit-mask:linear-gradient(90deg,#000 0 38.5%,transparent 38.5% 49%,#000 49% 100%);
-    mask:linear-gradient(90deg,#000 0 38.5%,transparent 38.5% 49%,#000 49% 100%);} /* 主角所在直帶挖空：標記滑到他身後會被平滑切掉、另一側再露出（真遮擋，不閃爍） */
+    -webkit-mask:linear-gradient(90deg,#000 0 34%,transparent 34% 58%,#000 58% 100%);
+    mask:linear-gradient(90deg,#000 0 34%,transparent 34% 58%,#000 58% 100%);} /* 主角(IP公仔較胖,佔34~58%)直帶挖空：標記滑到他身後被平滑切掉 */
   .dchip{position:absolute;font-weight:800;font-size:min(2.7vw,3.2vh);letter-spacing:.08em;padding:.28em .8em;border-radius:.55em;
     color:#0a1018;background:var(--c);border:2.5px solid #fff;box-shadow:0 .4vh 1.4vh rgba(0,0,0,.5),0 0 2.2vh var(--c);
     opacity:0;transform:translate(-50%,.8vh) scale(.88);transition:opacity .28s,transform .28s;white-space:nowrap;} /* 字放大；遮擋用較快的淡入出 */
   .dchip::after{content:"";position:absolute;left:50%;bottom:-0.48em;transform:translateX(-50%);border:0.48em solid transparent;border-top-color:var(--c);border-bottom:0;}
   .dchip.lit{opacity:1;transform:translate(-50%,0);}
-  #bulb{position:absolute;left:44%;top:6%;z-index:7;font-size:min(4.5vw,5.5vh);opacity:0;transform:translateY(1vh) scale(.6);transition:opacity .25s,transform .25s;filter:drop-shadow(0 0 1.2vh rgba(255,220,80,.9));pointer-events:none;}
+  #bulb{position:absolute;left:42%;top:5%;z-index:7;font-size:min(4.5vw,5.5vh);opacity:0;transform:translateY(1vh) scale(.6);transition:opacity .25s,transform .25s;filter:drop-shadow(0 0 1.2vh rgba(255,220,80,.9));pointer-events:none;}
   #bulb.on{opacity:1;transform:none;}
   /* 場景3：時鐘快轉（呼應「一個下午就沒了」） */
-  #fastclock{position:absolute;right:7%;top:10%;width:min(11vw,14vh);height:min(11vw,14vh);z-index:6;opacity:0;transition:opacity .6s;
+  #fastclock{position:absolute;right:7%;top:10%;width:min(11vw,14vh);height:min(11vw,14vh);z-index:6;opacity:0;
+    transition:opacity .6s,right 2.6s ease-in-out,top 2.6s ease-in-out,transform 2.6s ease-in-out;
     border-radius:50%;background:rgba(250,247,238,.92);border:.4vh solid #6b5b3e;box-shadow:0 .6vh 2vh rgba(0,0,0,.5);pointer-events:none;}
+  #fastclock.focus{right:50%;top:28%;transform:translate(50%,0) scale(1.9);} /* 定格後：時鐘滑到畫面中央放大——真正的「聚焦時間」 */
   #fastclock::after{content:"";position:absolute;left:50%;top:50%;width:9%;height:9%;background:#333;border-radius:50%;transform:translate(-50%,-50%);}
-  .fc-m,.fc-h{position:absolute;left:48.5%;bottom:50%;transform-origin:bottom center;background:#333;border-radius:1vh;}
-  .fc-m{width:3%;height:42%;animation:fcspin 1.1s linear infinite;}
-  .fc-h{width:5%;height:28%;background:#555;animation:fcspin 13.2s linear infinite;}
-  @keyframes fcspin{to{transform:rotate(360deg);}}
+  /* 指針由 JS 驅動：三定點 9:30→13:30→18:30（一整天）；分針固定指:30，時針順時針平滑走到下一格（不轉圈） */
+  .fc-m,.fc-h{position:absolute;left:48.5%;bottom:50%;transform-origin:bottom center;background:#333;border-radius:1vh;z-index:2;}
+  .fc-m{width:3%;height:40%;transform:rotate(180deg);}
+  .fc-h{width:5%;height:26%;background:#555;transform:rotate(285deg);}
+  #fastclock::after{z-index:3;}
+  .fcn{position:absolute;transform:translate(-50%,-50%);z-index:1;font-weight:700;color:#4a3b22;font-size:min(1.35vw,1.7vh);font-family:Georgia,"Times New Roman",serif;line-height:1;} /* 鐘面數字 1~12 */
 
   /* 場景3：表名紙卡（唸到才浮現） */
   #tableWrap{position:absolute;left:6%;right:6%;bottom:17%;z-index:6;display:flex;flex-wrap:wrap;justify-content:center;gap:.7vh 1vh;} /* 改成底部一列小卡，不再散佈中央擋角色 */
@@ -94,7 +98,7 @@
   .numcol .nv{font-size:min(4.8vw,5.8vh);font-weight:900;line-height:1.05;}
   .numcol.erp .nv{color:#a8ccff;} .numcol.xdl .nv{color:#a8f0c6;}
   #numdiff{position:absolute;left:50%;top:8%;transform:translate(-50%,-.8vh);opacity:0;transition:opacity .55s,transform .55s;
-    background:rgba(3,4,8,.94);border:3px solid #ff9a6a;border-radius:.5em;padding:.45em 1.1em;font-weight:900;font-size:min(2.6vw,3.2vh);color:#fff;text-align:center;line-height:1.35;box-shadow:0 .6vh 2.4vh rgba(0,0,0,.75),0 0 2vh rgba(255,120,60,.45);} /* v2：警示橘框+光暈，衝突高潮不再隱形 */
+    background:rgba(3,4,8,.94);border:3px solid #ff9a6a;border-radius:.5em;padding:.45em 1.1em;font-weight:900;font-size:min(2.6vw,3.2vh);color:#fff;text-align:center;line-height:1.35;box-shadow:0 .6vh 2.4vh rgba(0,0,0,.75),0 0 2vh rgba(255,120,60,.45);} /* 警示橘框+光暈，衝突高潮不再隱形 */
   #numdiff.on{opacity:1;transform:translate(-50%,0);}
   /* 場景6：有憑據的答案卡＋CTA — 壓成貼底細長條，只蓋腳邊地板、不蓋人物 */
   #s6 .center{left:2%;right:2%;bottom:1.5%;}
@@ -202,7 +206,7 @@
     <div class="overlay">
       <div id="numpanel">
         <div class="numcol erp"><div class="nk">ERP</div><div class="nv">302</div></div>
-        <div id="numdiff">差 18 pcs<br><span style="font-size:.72em;font-weight:600">為什麼？</span></div><!-- v2（評審🔴2）：謎底不提前掀，留給第8段 AI 揭曉 -->
+        <div id="numdiff">差 18 pcs<br><span style="font-size:.72em;font-weight:600">為什麼？</span></div><!-- 謎底不提前掀，留給第8段旁白揭曉 -->
         <div class="numcol xdl"><div class="nk">新得利</div><div class="nv">284</div></div>
       </div>
       <div class="lower mid"><span class="cap" id="sAline">ERP 一個數，新得利另一個數。到底，<b style="color:#ff9a6a">信哪一個</b>？</span></div>
@@ -224,11 +228,11 @@
         <div id="ask6"></div>
         <div id="ansHead"></div>
         <div id="evid">
-          <div class="erow"><span class="ek" id="ek0">可用庫存</span><span class="ev" id="ev0">320 pcs</span></div>
-          <div class="erow"><span class="ek" id="ek1">預估需求</span><span class="ev" id="ev1">210 pcs</span></div>
+          <div class="erow"><span class="ek" id="ek0">可用庫存(已驗收)</span><span class="ev" id="ev0">284 pcs</span></div>
+          <div class="erow"><span class="ek" id="ek1">至 8/12 需求</span><span class="ev" id="ev1">210 pcs</span></div>
           <div class="erow"><span class="ek" id="ek2">下一批到貨</span><span class="ev" id="ev2">8/12</span></div>
-          <div class="erow"><span class="ek" id="ek3">兩套系統差異</span><span class="ev" id="ev3">18 pcs・待驗收批次</span></div>
-          <div class="esrc" id="esrc">資料來源：ERP＋新得利｜更新 09:14｜數據為示意</div>
+          <div class="erow"><span class="ek" id="ek3">差 18 pcs 原因</span><span class="ev" id="ev3">待驗收批次</span></div>
+          <div class="esrc" id="esrc">資料來源：ERP＋新得利倉庫系統｜更新 09:14</div>
         </div>
         <div id="slogan"></div>
       </div>
@@ -262,7 +266,7 @@
   <div id="transcript" aria-label="逐字稿"><div id="trhead">逐字稿 / Transcript</div><div id="trbody"></div></div>
 
   <div id="start">
-    <div class="kick">SUPPLY CHAIN AI</div><!-- v2（評審🔴7）：拿掉檔名式工作術語；告知隊名/產品名後替換成品牌露出 -->
+    <div class="kick">SUPPLY CHAIN AI</div><!-- v2（評審🔴7）：告知公仔/隊名後替換成品牌露出 -->
     <h1>最簡單的問題，最難的答案</h1>
     <div class="meta">含旁白約 1.5 分鐘 ‧ 建議全螢幕</div>
     <button id="playBtn">▶ 開 始</button>
@@ -299,7 +303,7 @@ addEventListener('resize',layout);addEventListener('load',layout);
 // ---------- 影片：每幕一段，載入失敗(缺 v5~v8)則自動退回底色背景 ----------
 const VIDS=[...document.querySelectorAll('.vid')]; // index 0..7 對應 v1..v8、對應場景 0..7
 VIDS.forEach((v,i)=>{v.loop=false;v.addEventListener('error',()=>{v.dataset.bad='1';v.style.display='none';});}); // 不循環：播完停在最後一格（定格）等旁白，避免「播完一輪又重來」的跳接
-function ensureVid(i){const v=VIDS[i];if(v&&!v.getAttribute('src')){v.setAttribute('src','videos/v'+v.getAttribute('data-v')+'.mp4?nowm=2');}} // 分段載入：用到才設 src；?nowm=2 讓瀏覽器放棄舊快取、抓星形遮罩去浮水印新檔
+function ensureVid(i){const v=VIDS[i];if(v&&!v.getAttribute('src')){v.setAttribute('src','videos/v'+v.getAttribute('data-v')+'.mp4?ip=1');}} // 分段載入：用到才設 src；?ip=1 強制抓 IP 公仔新影片
 ensureVid(0);ensureVid(1);
 function sceneFillRate(i){const vd=(VIDS[i]&&VIDS[i].duration)?VIDS[i].duration:10;const sd=N.on?estDur(i):DUR[i];return clamp(vd/sd,0.85,(i===5?1.45:1));} // 近原速播放(0.85~1x，動作才順)；播完定格最後一格等旁白。第六段旁白短→允許加速到綠箱亮相跟旁白同步收
 function playVid(i){ensureVid(i);ensureVid(i+1);VIDS.forEach((v,k)=>{if(k===i){if(!v.dataset.bad){try{v.muted=true;v.currentTime=0;v.playbackRate=sceneFillRate(i)*speed;if(playing){const p=v.play();if(p&&p.catch)p.catch(()=>{});}else{v.pause();}}catch(e){}}}else{try{v.pause();}catch(e){}}});}
@@ -313,13 +317,16 @@ const VILC=['#4aa8ff','#4ade7a','#ffb05c','#c070ff'];
 const deptEls=[...document.querySelectorAll('.dchip')];
 let qTarget=-1; // （旁白 chunk 掃描仍會更新，供除錯；標記改由影片時間驅動）
 // v2 影片時間軸：四位員工被鏡頭帶到的時間窗與頭頂位置（x 隨鏡頭右→左漂移；由關鍵幀量測）
-const CHIP_T=[
- {t0:0.6,t1:3.3,tx:3.3,x0:58,x1:32,top:16},  // 倉管（貨架）
- {t0:3.5,t1:6.3,tx:6.3,x0:70,x1:36,top:17},  // 生管（規劃板）
- {t0:6.5,t1:8.7,tx:8.7,x0:56,x1:26,top:26},  // 採購（蓋章桌）
- {t0:8.9,t1:99,tx:10,x0:72,x1:55,top:20}];   // 品管（放大鏡；定格後留在畫面）
-const BULB_T=[[2.5,3.45],[5.45,6.35],[7.85,8.72],[9.2,9.95]]; // 每站問完，哲人頭上亮 💡
+const CHIP_T=[ // IP 公仔版：員工由右側入鏡、往左滑過主角身後（依新影片逐幀量測）
+ {t0:0.6,t1:2.4,tx:2.4,x0:62,x1:44,top:24},  // 倉管（棕髮小弟・貨架）
+ {t0:3.0,t1:5.2,tx:5.2,x0:79,x1:48,top:24},  // 生管（金髮雙辮・規劃板）
+ {t0:5.4,t1:7.3,tx:7.3,x0:79,x1:52,top:24},  // 採購（黑髮眼鏡・蓋章桌）
+ {t0:7.6,t1:9.95,tx:10,x0:83,x1:79,top:24}]; // 品管（紫髮白袍・放大鏡；定格即淡出）
+const BULB_T=[[1.8,2.6],[4.5,5.3],[6.8,7.5],[9.2,9.95]]; // 每站問完，公仔頭上亮 💡
 const erpCol=document.querySelector('#numpanel .erp'),xdlCol=document.querySelector('#numpanel .xdl'),diffEl=$('numdiff');
+const fcM=document.querySelector('#fastclock .fc-m'),fcH=document.querySelector('#fastclock .fc-h');
+(function(){const fc=$('fastclock');if(!fc)return;for(let n=1;n<=12;n++){const a=n*30*Math.PI/180,d=document.createElement('div');d.className='fcn';d.textContent=n;
+  d.style.left=(50+Math.sin(a)*38).toFixed(1)+'%';d.style.top=(50-Math.cos(a)*38).toFixed(1)+'%';fc.appendChild(d);}})(); // 鐘面數字 1~12，讓觀眾直接讀得出時間
 
 // ---------- 場景3：表名紙卡 ----------
 const LBL=['庫存表','預估表','交期表','採購單','驗收紀錄','品檢記錄'];
@@ -380,9 +387,9 @@ const LANG={
   narr:[
    '山苦瓜，下週會不會缺貨？——同事順口一問，我卻沒辦法馬上回答。',
    '先到倉管，問庫存還有多少；再走到生管，問原料夠不夠。接著找採購，問下一批到貨；最後到品管，問檢驗報告好了沒。一句話，得跑四站。',
-   '想自己查？光是攤開庫存表、預估表、交期表、採購單、驗收紀錄、品檢記錄——六張表一張一張比對，一個下午就沒了。',
+   '想自己查？光是攤開庫存表、預估表、交期表、採購單、驗收紀錄、品檢記錄——六張表一張一張比對，一整天就沒了。',
    '更麻煩的是，同一個山苦瓜，ERP 顯示三百零二件，新得利顯示二百八十四件，差了十八件。到底該信哪一個？',
-   '天黑了，忙了一整天，我最放不下的還是——這個答案，真的對嗎？',
+   '天黑了，人都走光了，我最放不下的還是——這個答案，真的對嗎？',
    '而這，只是這週幾百個品項裡的其中一個。',
    '那如果，有一位真正懂供應鏈的 AI 同事呢？同一句問題，它同時查完四個部門、六張表，還比對了 ERP 跟新得利——幾秒鐘，就把答案湊齊。',
    '同事又來問。這次，AI 幾秒就給出答案——不會缺貨，差的十八件也查清楚了：是待驗收。他放心，我安心，共創雙贏。'],
@@ -398,9 +405,9 @@ const LANG={
   narr:[
    "Bitter gourd — will we run out next week? A colleague asks in passing… and I can't answer on the spot.",
    "First stop, Warehouse — how much stock is left? Then Planning — enough raw material? Next, Purchasing — when's the next batch? And finally QC — is the report ready? One question, four stops.",
-   "Sure, I could look it up myself — but just digging through the data means opening the stock sheet, the forecast, the lead-time sheet, purchase orders, receiving records, QC logs — six sheets, cross-checked one by one, a whole afternoon gone.",
+   "Sure, I could look it up myself — but just digging through the data means opening the stock sheet, the forecast, the lead-time sheet, purchase orders, receiving records, QC logs — six sheets, cross-checked one by one, a whole day gone.",
    "Worse still — for the same bitter gourd, ERP shows 302 pcs but the second system shows 284. An 18-piece gap. Which one do I trust?",
-   "Night falls. A whole day's work. And what I still can't shake is — is this answer even right?",
+   "Night falls. Everyone else has gone home. And what I still can't shake is — is this answer even right?",
    "And bitter gourd is just one of the hundreds of items I'm watching this week.",
    "But what if you had an AI teammate who truly understood supply chain? One question — and it checks all four departments, all six sheets, and reconciles ERP against the second system, all at once. In seconds, it has the whole answer.",
    "The colleague asks again. This time, the AI answers in seconds — no shortage, and the 18-piece gap is solved too: a pending-inspection batch. He's relieved; so am I. A win-win for everyone."],
@@ -416,9 +423,9 @@ const LANG={
   narr:[
    'ゴーヤ、来週は欠品する？——同僚が軽く聞いてきた。でも私は、すぐには答えられない。',
    'まず倉庫で、在庫はいくつか聞く。次に生産管理で、原料は足りるか。続いて購買で、次のロットはいつか。最後に品質管理で、検査報告はまだかと——ひとつの質問で、四か所も回る。',
-   'もちろん自分で調べてもいい。でも資料をめくるだけでも、在庫表、予測表、納期表、発注書、検収記録、品質検査記録——六枚の表を広げて、一枚ずつ照合して、午後がまるごと消える。',
+   'もちろん自分で調べてもいい。でも資料をめくるだけでも、在庫表、予測表、納期表、発注書、検収記録、品質検査記録——六枚の表を広げて、一枚ずつ照合して、一日がまるごと消える。',
    '厄介なのは、同じゴーヤなのに、ERPは302個、新得利は284個——18個もずれていること。どちらを信じればいい？',
-   '日が暮れ、丸一日働いた。それでも引っかかるのは——この答え、本当に正しい？',
+   '夜が更けて、みんな帰ってしまった。それでも引っかかるのは——この答え、本当に正しい？',
    'そしてゴーヤは、今週見るべき数百の品目のひとつにすぎない。',
    'もし、サプライチェーンを本当に理解したAIの同僚がいたら？ひとつの質問で、四つの部門と六枚の表を同時に確認し、ERPと新得利まで突き合わせる——数秒で、答えをすべて揃えてくれる。',
    '同僚がまた聞きに来た。今度はAIが数秒で答える——欠品しません。差の18個も検収待ちだと突き止めた。彼も安心、私も安心、みんなにウィンウィンだ。'],
@@ -434,7 +441,7 @@ const LANG={
 LANG.dori=Object.assign({},LANG.zh,{name:'Dori 真人配音'});
 // 場景6「有憑據的答案卡＋CTA」與新標語 的多語文字
 const EV={
- // v2（評審🔴1）：數字閉環——284=ERP302 剔除待驗收18 的可用量(ATP)，與第4段 302/284/差18 前後呼應；移除「數據為示意」
+ // 數字閉環：284=ERP302 剔除待驗收18 的可用量(ATP)，與第4段 302/284/差18 前後呼應；「差18」明確標示是兩套系統差、非 320-210
  zh:{head:'不會，下週不會缺貨。',rows:[['可用庫存(已驗收)','284 pcs'],['至 8/12 需求','210 pcs'],['下一批到貨','8/12'],['差 18 pcs 原因','待驗收批次']],src:'資料來源：ERP＋新得利倉庫系統｜更新 09:14',slogan:'答案快，更要答得有據。',cta:'▸ 選 3 個高頻問題，做兩週 PoC'},
  en:{head:"No — you won't run out next week.",rows:[['On-hand (inspected)','284'],['Demand by Aug 12','210'],['Next arrival','Aug 12'],['18-pc gap','pending QC']],src:'Source: ERP + warehouse system · updated 09:14',slogan:'Fast answers — with the receipts.',cta:'▸ Pick 3 top questions — 2-week PoC'},
  ja:{head:'いいえ、来週は欠品しません。',rows:[['在庫(検収済)','284 個'],['8/12までの需要','210 個'],['次回入荷','8/12'],['差18個の原因','検収待ち']],src:'出典：ERP＋新得利倉庫システム｜更新 09:14',slogan:'速く、そして根拠のある答えを。',cta:'▸ 高頻度の3問で2週間PoC'},
@@ -542,9 +549,16 @@ function render(){
   for(let k=0;k<SCENES.length;k++)SCENES[k].style.opacity=sceneOpacity(k).toFixed(3);
   const ls=t-B[i];
   // 影片播完不再乾停：定格畫面緩慢推近（Ken Burns），旁白唸完前畫面持續有動感
+  // 第7段(i===6)加強版：旁白還在唸時，鏡頭由遠明顯推近、聚焦主角與 AI（推到~1.35x，指數曲線永不完全停）
   {const cv=VIDS[i];if(cv&&!cv.dataset.bad){cv.style.opacity=1;
-    if(cv.ended){if(!cv._kb)cv._kb=segElapsed;const z=1+0.1*Math.min(1,(segElapsed-cv._kb)/9);cv.style.transform='scale('+z.toFixed(4)+')';}
-    else{cv._kb=0;if(cv.style.transform)cv.style.transform='';}}}
+    if(cv.ended){if(!cv._kb)cv._kb=segElapsed;const tE=segElapsed-cv._kb;
+      const A=(i===6)?0.42:(i===1?0.36:(i===2?0.32:0.12)),tau=(i===6||i===1||i===2)?6:7; // 第2/3/7段加強推軌
+      if(i===6)cv.style.transformOrigin='57% 36%'; // 聚焦點=公仔與機器人中間（IP版）
+      else if(i===1)cv.style.transformOrigin='58% 34%'; // 聚焦點=公仔與品管員之間（IP版）
+      else if(i===2)cv.style.transformOrigin='34% 24%'; // 第3段聚焦「時間」：IP版牆鐘在左上
+      if(i===2)cv.style.filter='brightness(0.55)'; // 第3段定格：背景變暗，讓中央時鐘成為焦點
+      const z=1+A*(1-Math.exp(-tE/tau));cv.style.transform='scale('+z.toFixed(4)+')';}
+    else{cv._kb=0;if(cv.style.transform){cv.style.transform='';cv.style.transformOrigin='';}if(cv.style.filter)cv.style.filter='';}}}
   if(N.on&&lang==='dori'&&i===1&&VO[1]&&!VO[1].paused){const d=VO[1].duration||0,ct=VO[1].currentTime;
     if(d)for(let k=DEPTS.length-1;k>=0;k--){if(ct>=VO2FRAC[k]*d){qTarget=k;break;}}}
   if(N.on&&lang==='dori'&&i===2&&VO[2]&&!VO[2].paused){const d=VO[2].duration||0,ct=VO[2].currentTime;if(d)for(let k=0;k<LBL.length;k++)if(ct>=VO3FRAC[k]*d)lblShown[k]=1;}
@@ -555,13 +569,17 @@ function render(){
 
   // 場景1：問句字幕＋「同事」標記等影片裡同事現身(約2.3s)才彈出
   {typeInto($('q1'),L.q,0.25,12,ls,true); // v2：0.25s 就開始打字，前4秒鉤子直接立住
-   $('mark1').classList.toggle('show',i===0&&!!VIDS[0]&&VIDS[0].currentTime>=2.3);}
+   // 影片先停在首幀 1.2s：旁白先唸到「同事順口一問」(~3.3s)，同事才跳出來(~3.7s)，順序不再顛倒
+   {const v0=VIDS[0];if(i===0&&v0&&!v0.dataset.bad&&!v0.ended){
+     if(segElapsed<1.2){if(!v0.paused)v0.pause();try{if(v0.currentTime>0.05)v0.currentTime=0;}catch(e){}}
+     else if(v0.paused&&playing){const p=v0.play();if(p&&p.catch)p.catch(()=>{});}}}
+   $('mark1').classList.toggle('show',i===0&&!!VIDS[0]&&VIDS[0].currentTime>=2.6);} // IP版：同事約2.6s完全現身
   // 場景7：「AI 同事」標記等機器人降下(約2.1s)才彈出
-  {const v7t=(VIDS[6]&&VIDS[6].currentTime)||0;$('mark7').classList.toggle('show',i===6&&v7t>=1.3&&v7t<=7.2);} // 新 v7：機器人1.3s到位；7.2s後讓位給頭上的大燈泡
+  {const v7t=(VIDS[6]&&VIDS[6].currentTime)||0;$('mark7').classList.toggle('show',i===6&&v7t>=0.8&&v7t<=6.8);} // IP版 v7：機器人開場即在(0.8s亮)；6.8s讓位給頭上的大燈泡
   // 場景2：哲人逐站詢問——標記跟著鏡頭裡的人物頭頂移動；每站問完哲人頭上亮 💡 再去下一站（依影片時間驅動，名字必對到人）
   {const vt=(VIDS[1]&&VIDS[1].currentTime)||0;
    deptEls.forEach((el,k)=>{const c=CHIP_T[k];const p=clamp((vt-c.t0)/(c.tx-c.t0),0,1);const x=c.x0+(c.x1-c.x0)*p;
-     const on=(i===1&&vt>=c.t0&&vt<=c.t1&&x>49.2); // 主角碰到標記(滑到他右緣49%)→標記就此消失，不再從另一側出現
+     const on=(i===1&&vt>=c.t0&&vt<=c.t1&&x>58.5); // 主角(IP公仔)右緣~58%：標記碰到即消失，不再從另一側出現
      if(on){el.style.left=x.toFixed(1)+'%';el.style.top=c.top+'%';}
      el.classList.toggle('lit',on);});
    $('bulb').classList.toggle('on',i===1&&BULB_T.some(w=>vt>=w[0]&&vt<=w[1]));
@@ -569,7 +587,15 @@ function render(){
   // 場景3：表名紙卡依序浮現＋結尾時鐘快轉（呼應「一個下午就沒了」）
   {lblEls.forEach((el,k)=>{el.classList.toggle('on',!!lblShown[k]||smooth((ls-LBL_AT[k]*(N.on?1.9:1))/0.7)>0.5);}); // v2（評審🔴5）：TTS 驅動 OR 時間備援取聯集，TTS 靜默失敗表卡也照出
    $('s3line').parentElement.style.opacity=Math.max(N.on&&lblShown.every(Boolean)?1:0,smooth((ls-(N.on?9.5:5.0))/1.0)).toFixed(3);
-   $('fastclock').style.opacity=(i===2)?smooth((segElapsed-0.62*estDur(2))/0.8).toFixed(3):0;}
+   {const fc=$('fastclock'),T0=2.0,on=(i===2)&&segElapsed>=T0;
+    fc.style.opacity=on?smooth((segElapsed-T0)/0.8).toFixed(3):0;
+    if(on&&fcM&&fcH){const ed=estDur(2),p=segElapsed;
+      // 一整天三定點：9:30(開工)→13:30(過午,+4h)→18:30(下班,+5h)；分針快轉多圈、時針掃到定點（原版轉圈）
+      const ST=[[T0,285,180],[0.45*ed,405,1620],[0.72*ed,555,3420]];
+      let hd=ST[0][1],md=ST[0][2];
+      for(let k=1;k<ST.length;k++){const e=smooth((p-ST[k][0])/0.9);hd+=(ST[k][1]-ST[k-1][1])*e;md+=(ST[k][2]-ST[k-1][2])*e;}
+      fcH.style.transform='rotate('+(hd%360).toFixed(1)+'deg)';fcM.style.transform='rotate('+(md%360).toFixed(1)+'deg)';}
+    const v3=VIDS[2];fc.classList.toggle('focus',i===2&&!!v3&&v3.ended);}} // 影片定格→時鐘滑到中央放大（聚焦時間）
   // 場景A：依旁白節奏依序亮：ERP 302(左上放大)→新得利 284(右上)→中間深色「差18」
   {$('sAline').parentElement.style.opacity=smooth((ls-1.4)/1.0).toFixed(3);
    const ed=estDur(3);
