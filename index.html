@@ -37,11 +37,7 @@
   .cap::after{content:"";position:absolute;left:50%;top:-0.6em;transform:translateX(-50%);border:0.6em solid transparent;border-bottom-color:rgba(10,14,24,.74);border-top:0;}
   #s1 .cap{background:rgba(22,46,80,.82);} #s1 .cap::after{border-bottom-color:rgba(22,46,80,.82);} /* 同事發問＝藍框 */
   #s5 .cap{background:rgba(16,48,46,.82);} #s5 .cap::after{border-bottom-color:rgba(16,48,46,.82);} /* AI 希望＝青框 */
-  /* v2（評審🔴3+6）：恢復開場鉤子與核心主張兩張字卡；其餘字幕維持隱藏 */
-  #s1 .cap,#s5 .cap{display:inline-block;}
-  #s1 .cap::after{display:none;} /* 問句置底，朝上尾巴不指向特定對象，關掉 */
-  /* IP版：公仔的臉在畫面上半部，問句移回下方置中，不遮臉 */
-  #s1 .big{font-size:min(4.2vw,5vh);}
+  /* 對齊老者定稿版：所有字卡隱藏，訊息交給旁白 */
   .cur{display:inline-block;width:.08em;height:1em;background:currentColor;margin-left:.06em;vertical-align:-0.12em;animation:blink 1s steps(1) infinite;}
   @keyframes blink{50%{opacity:0;}}
   #clock{position:absolute;right:6%;top:11%;font-family:"Consolas",monospace;z-index:7;
@@ -102,19 +98,14 @@
   #numdiff.on{opacity:1;transform:translate(-50%,0);}
   /* 場景6：有憑據的答案卡＋CTA — 壓成貼底細長條，只蓋腳邊地板、不蓋人物 */
   #s6 .center{left:2%;right:2%;bottom:1.5%;}
-  /* v2（評審🔴4）：答案卡是全片 payoff——底加深、字級設下限保底、證據逐格彈出「一條一條查給你看」 */
-  #anscard{max-width:98%;margin:0 auto;background:rgba(8,12,20,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(180,210,255,.22);border-radius:.6em;padding:.35em .8em;text-align:center;opacity:0;transition:opacity .6s;} /* 等旁白講到 AI 給答案才亮 */
+  /* 對齊老者定稿版：答案卡細長較透、證據一次亮 */
+  #anscard{max-width:98%;margin:0 auto;background:rgba(8,12,20,.46);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);border:1px solid rgba(180,210,255,.16);border-radius:.6em;padding:.3em .7em;text-align:center;opacity:0;transition:opacity .6s;} /* 等旁白講到 AI 給答案才亮 */
   #ask6{display:none;} /* 問句已在第1段出現過，收尾省掉以壓低卡片高度 */
-  #ansHead{font-weight:800;display:inline-block;font-size:max(16px,min(2.6vw,3.1vh));color:#fff2d8;text-shadow:0 .1em .6em rgba(0,0,0,.7);vertical-align:middle;margin-right:.6em;}
+  #ansHead{font-weight:800;display:inline-block;font-size:min(2.2vw,2.7vh);color:#fff2d8;text-shadow:0 .1em .6em rgba(0,0,0,.7);vertical-align:middle;margin-right:.6em;}
   #evid{display:inline-flex;opacity:0;transition:opacity .6s;flex-wrap:wrap;justify-content:center;align-items:center;gap:.3vh .5vw;vertical-align:middle;}
-  #evid .erow{display:inline-flex;flex-direction:column;justify-content:center;gap:0;border-bottom:none;background:rgba(255,255,255,.09);border-radius:.35em;padding:.16em .6em;
-    opacity:0;transform:translateY(.6vh);transition:opacity .4s,transform .4s;}
-  #evid.on .erow{opacity:1;transform:none;}
-  #evid.on .erow:nth-child(1){transition-delay:0s;} #evid.on .erow:nth-child(2){transition-delay:.3s;}
-  #evid.on .erow:nth-child(3){transition-delay:.6s;} #evid.on .erow:nth-child(4){transition-delay:.9s;}
-  #evid .ek{color:#bcd2ee;font-size:max(12px,min(1.4vw,1.7vh));white-space:nowrap;} #evid .ev{font-weight:700;color:#fff;font-size:max(14px,min(1.8vw,2.2vh));white-space:nowrap;}
-  #evid .esrc{flex-basis:100%;margin-top:.2vh;font-size:max(11px,min(1.3vw,1.6vh));color:#c3d2e8;opacity:0;transition:opacity .4s;transition-delay:1.2s;}
-  #evid.on .esrc{opacity:1;}
+  #evid .erow{display:inline-flex;flex-direction:column;justify-content:center;gap:0;border-bottom:none;background:rgba(255,255,255,.07);border-radius:.35em;padding:.12em .55em;}
+  #evid .ek{color:#bcd2ee;font-size:min(1.1vw,1.4vh);white-space:nowrap;} #evid .ev{font-weight:700;color:#fff;font-size:min(1.5vw,1.9vh);white-space:nowrap;}
+  #evid .esrc{flex-basis:100%;margin-top:.15vh;font-size:min(1.1vw,1.4vh);color:#9fb2cc;}
   #slogan{display:inline-block;margin:.2vh .8em 0 0;font-weight:800;font-size:min(1.9vw,2.4vh);letter-spacing:.04em;color:#ffcf8a;opacity:0;transition:opacity .6s;text-shadow:0 .1em .6em rgba(0,0,0,.7);vertical-align:middle;}
   #cta{display:none;} /* 依使用者要求移除「選 3 個高頻問題」CTA 行 */
   #cta .ctabtn{font-size:min(1.6vw,2vh)!important;padding:.3em .8em!important;}
@@ -266,7 +257,7 @@
   <div id="transcript" aria-label="逐字稿"><div id="trhead">逐字稿 / Transcript</div><div id="trbody"></div></div>
 
   <div id="start">
-    <div class="kick">SUPPLY CHAIN AI</div><!-- v2（評審🔴7）：告知公仔/隊名後替換成品牌露出 -->
+    <div class="kick">SUPPLY CHAIN ‧ 開場 ‧ IP 公仔版</div><!-- 照老者版格式；告知公仔/隊名後可替換成品牌露出 -->
     <h1>最簡單的問題，最難的答案</h1>
     <div class="meta">含旁白約 1.5 分鐘 ‧ 建議全螢幕</div>
     <button id="playBtn">▶ 開 始</button>
@@ -568,7 +559,7 @@ function render(){
   $('clock').style.opacity=(((i===0)?smooth((ls-0.3)/1):(i===4)?smooth(ls/0.4):0)*sceneOpacity(i)).toFixed(3);
 
   // 場景1：問句字幕＋「同事」標記等影片裡同事現身(約2.3s)才彈出
-  {typeInto($('q1'),L.q,0.25,12,ls,true); // v2：0.25s 就開始打字，前4秒鉤子直接立住
+  {typeInto($('q1'),L.q,0.5,10,ls,true);
    // 影片先停在首幀 1.2s：旁白先唸到「同事順口一問」(~3.3s)，同事才跳出來(~3.7s)，順序不再顛倒
    {const v0=VIDS[0];if(i===0&&v0&&!v0.dataset.bad&&!v0.ended){
      if(segElapsed<1.2){if(!v0.paused)v0.pause();try{if(v0.currentTime>0.05)v0.currentTime=0;}catch(e){}}
@@ -606,7 +597,6 @@ function render(){
   {const k=N.on?1:0.5,p=segElapsed; // 對齊第八段劇情（短版旁白~11s）：同事再問→AI 秒答(卡片亮,對上「不會缺貨」特寫~7s)→標語；CTA 已移除
    $('anscard').style.opacity=smooth((p-6.8*k)/0.8).toFixed(3);
    $('evid').style.opacity=smooth((p-7.6*k)/0.9).toFixed(3);
-   $('evid').classList.toggle('on',i===7&&p>=7.6*k); // v2：證據四格逐格彈出（間隔0.3s），來源列最後亮
    $('slogan').style.opacity=smooth((p-11*k)/0.9).toFixed(3);}
 
   if(tlPhasesEl){const ch=tlPhasesEl.children;const af=N.on?clamp(segElapsed/estDur(i),0,1):clamp((t-B[i])/DUR[i],0,1);for(let j=0;j<ch.length;j++){ch[j].classList.toggle('active',j===i);ch[j].classList.toggle('done',j<i);ch[j].querySelector('.pb i').style.width=(j<i?100:(j===i?af*100:0))+'%';}
