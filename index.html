@@ -294,7 +294,7 @@ addEventListener('resize',layout);addEventListener('load',layout);
 // ---------- 影片：每幕一段，載入失敗(缺 v5~v8)則自動退回底色背景 ----------
 const VIDS=[...document.querySelectorAll('.vid')]; // index 0..7 對應 v1..v8、對應場景 0..7
 VIDS.forEach((v,i)=>{v.loop=false;v.addEventListener('error',()=>{v.dataset.bad='1';v.style.display='none';});}); // 不循環：播完停在最後一格（定格）等旁白，避免「播完一輪又重來」的跳接
-function ensureVid(i){const v=VIDS[i];if(v&&!v.getAttribute('src')){v.setAttribute('src','videos/v'+v.getAttribute('data-v')+'.mp4?ip=1');}} // 分段載入：用到才設 src；?ip=1 強制抓 IP 公仔新影片
+function ensureVid(i){const v=VIDS[i];if(v&&!v.getAttribute('src')){v.setAttribute('src','videos/v'+v.getAttribute('data-v')+'.mp4?ip=2');}} // 分段載入：用到才設 src；?ip=2 破快取（v1/v5 已還原為無遮蓋版）
 ensureVid(0);ensureVid(1);
 function sceneFillRate(i){const vd=(VIDS[i]&&VIDS[i].duration)?VIDS[i].duration:10;const sd=N.on?estDur(i):DUR[i];return clamp(vd/sd,0.85,(i===5?1.45:1));} // 近原速播放(0.85~1x，動作才順)；播完定格最後一格等旁白。第六段旁白短→允許加速到綠箱亮相跟旁白同步收
 function playVid(i){ensureVid(i);ensureVid(i+1);VIDS.forEach((v,k)=>{if(k===i){if(!v.dataset.bad){try{v.muted=true;v.currentTime=0;v.playbackRate=sceneFillRate(i)*speed;if(playing){const p=v.play();if(p&&p.catch)p.catch(()=>{});}else{v.pause();}}catch(e){}}}else{try{v.pause();}catch(e){}}});}
@@ -568,16 +568,16 @@ function render(){
   // 場景7：「AI 同事」標記等機器人降下(約2.1s)才彈出
   {const v7t=(VIDS[6]&&VIDS[6].currentTime)||0;$('mark7').classList.toggle('show',i===6&&v7t>=0.8&&v7t<=6.8);} // IP版 v7：機器人開場即在(0.8s亮)；6.8s讓位給頭上的大燈泡
   // 場景2：哲人逐站詢問——標記跟著鏡頭裡的人物頭頂移動；每站問完哲人頭上亮 💡 再去下一站（依影片時間驅動，名字必對到人）
-  {const vt=(VIDS[1]&&VIDS[1].currentTime)||0;
-   deptEls.forEach((el,k)=>{const c=CHIP_T[k];const p=clamp((vt-c.t0)/(c.tx-c.t0),0,1);const x=c.x0+(c.x1-c.x0)*p;
-     const on=(i===1&&vt>=c.t0&&vt<=c.t1); // 會演戲版 v2：員工定點、標記固定位置+時間窗，不需碰撞消失邏輯
-     if(on){el.style.left=x.toFixed(1)+'%';el.style.top=c.top+'%';}
+  {const ti=N.on?qTarget:Math.min(3,Math.floor(ls/2.5)); // 旁白唸到哪個部門、哪個標記才亮（與老者版同步邏輯）
+   deptEls.forEach((el,k)=>{const c=CHIP_T[k];
+     const on=(i===1&&ti===k);
+     if(on){el.style.left=c.x0.toFixed(1)+'%';el.style.top=c.top+'%';} // 位置=該員工定點
      el.classList.toggle('lit',on);});
-   $('bulb').classList.toggle('on',i===1&&BULB_T.some(w=>vt>=w[0]&&vt<=w[1]));
+   $('bulb').classList.toggle('on',false); // 新 v2 影片內建頭頂實體燈泡，網頁疊加停用
    $('s2line').parentElement.style.opacity=smooth((ls-1.0)/1.0).toFixed(3);}
   // 場景3：表名紙卡依序浮現＋結尾時鐘快轉（呼應「一個下午就沒了」）
-  {lblEls.forEach((el,k)=>{el.classList.toggle('on',!!lblShown[k]||smooth((ls-LBL_AT[k]*(N.on?1.9:1))/0.7)>0.5);}); // v2（評審🔴5）：TTS 驅動 OR 時間備援取聯集，TTS 靜默失敗表卡也照出
-   $('s3line').parentElement.style.opacity=Math.max(N.on&&lblShown.every(Boolean)?1:0,smooth((ls-(N.on?9.5:5.0))/1.0)).toFixed(3);
+  {lblEls.forEach((el,k)=>{el.classList.toggle('on',N.on?!!lblShown[k]:smooth((ls-LBL_AT[k])/0.7)>0.5);}); // 對齊老者版：純旁白驅動，唸到哪張表哪張才浮現（TTS 死機時由 guard 兜底全亮）
+   $('s3line').parentElement.style.opacity=(N.on?(lblShown.every(Boolean)?1:0):smooth((ls-5.0)/1.0)).toFixed(3);
    {const fc=$('fastclock'),T0=2.0,on=(i===2)&&segElapsed>=T0;
     fc.style.opacity=on?smooth((segElapsed-T0)/0.8).toFixed(3):0;
     if(on&&fcM&&fcH){const ed=estDur(2),p=segElapsed;
