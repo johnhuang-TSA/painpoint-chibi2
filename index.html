@@ -53,8 +53,8 @@
   .charmark::after{content:"";position:absolute;left:50%;bottom:-0.48em;transform:translateX(-50%);border:0.48em solid transparent;border-top-color:#dbe8ff;border-bottom:0;}
   .charmark.ai{background:linear-gradient(180deg,#dffff6,#79e6cf);border-color:#eafffb;color:#043a2f;}
   .charmark.ai::after{border-top-color:#79e6cf;}
-  #mark1{top:10%;right:26%;} /* 場景1（IP版）：同事在右側桌邊，頭頂約x67%/y22% */
-  #mark7{top:17%;right:20%;} /* 場景7（IP版）：機器人在右，頭頂約x74%/y28% */
+  #mark1{top:40%;right:24%;} /* 場景1（會演戲版）：同事較矮在右，頭頂約x70%/y50% */
+  #mark7{top:26%;right:21%;} /* 場景7（會演戲版）：機器人在右，頭頂約x73%/y35% */
 
   /* 場景2：部門標記跟著鏡頭裡的人物頭頂移動（位置由 JS 依影片時間驅動），哲人每站問完亮燈泡 */
   #deptStrip{position:absolute;inset:0;z-index:6;pointer-events:none;
@@ -317,12 +317,12 @@ const VILC=['#4aa8ff','#4ade7a','#ffb05c','#c070ff'];
 const deptEls=[...document.querySelectorAll('.dchip')];
 let qTarget=-1; // （旁白 chunk 掃描仍會更新，供除錯；標記改由影片時間驅動）
 // v2 影片時間軸：四位員工被鏡頭帶到的時間窗與頭頂位置（x 隨鏡頭右→左漂移；由關鍵幀量測）
-const CHIP_T=[ // IP 公仔版：員工由右側入鏡、往左滑過主角身後（依新影片逐幀量測）
- {t0:0.6,t1:2.4,tx:2.4,x0:62,x1:44,top:24},  // 倉管（棕髮小弟・貨架）
- {t0:3.0,t1:5.2,tx:5.2,x0:79,x1:48,top:24},  // 生管（金髮雙辮・規劃板）
- {t0:5.4,t1:7.3,tx:7.3,x0:79,x1:52,top:24},  // 採購（黑髮眼鏡・蓋章桌）
- {t0:7.6,t1:9.95,tx:10,x0:83,x1:79,top:24}]; // 品管（紫髮白袍・放大鏡；定格即淡出）
-const BULB_T=[[1.8,2.6],[4.5,5.3],[6.8,7.5],[9.2,9.95]]; // 每站問完，公仔頭上亮 💡
+const CHIP_T=[ // 會演戲版 v2：鏡頭近乎定機、員工定點，標記改固定位置+時間窗（無漂移）
+ {t0:1.0,t1:3.2,tx:3.2,x0:68,x1:68,top:36},  // 倉管（右側疊箱）
+ {t0:3.4,t1:5.4,tx:5.4,x0:20,x1:20,top:40},  // 生管（左側白板排程）
+ {t0:5.6,t1:7.4,tx:7.4,x0:78,x1:78,top:38},  // 採購（右側看文件打電腦）
+ {t0:7.6,t1:9.9,tx:9.9,x0:63,x1:63,top:42}]; // 品管（右側放大鏡）
+const BULB_T=[]; // 新 v2 影片已內建頭頂實體燈泡，網頁疊加 💡 停用
 const erpCol=document.querySelector('#numpanel .erp'),xdlCol=document.querySelector('#numpanel .xdl'),diffEl=$('numdiff');
 const fcM=document.querySelector('#fastclock .fc-m'),fcH=document.querySelector('#fastclock .fc-h');
 (function(){const fc=$('fastclock');if(!fc)return;for(let n=1;n<=12;n++){const a=n*30*Math.PI/180,d=document.createElement('div');d.className='fcn';d.textContent=n;
@@ -553,9 +553,9 @@ function render(){
   {const cv=VIDS[i];if(cv&&!cv.dataset.bad){cv.style.opacity=1;
     if(cv.ended){if(!cv._kb)cv._kb=segElapsed;const tE=segElapsed-cv._kb;
       const A=(i===6)?0.42:(i===1?0.36:(i===2?0.32:0.12)),tau=(i===6||i===1||i===2)?6:7; // 第2/3/7段加強推軌
-      if(i===6)cv.style.transformOrigin='57% 36%'; // 聚焦點=公仔與機器人中間（IP版）
-      else if(i===1)cv.style.transformOrigin='58% 34%'; // 聚焦點=公仔與品管員之間（IP版）
-      else if(i===2)cv.style.transformOrigin='34% 24%'; // 第3段聚焦「時間」：IP版牆鐘在左上
+      if(i===6)cv.style.transformOrigin='57% 36%'; // 聚焦點=公仔與機器人中間
+      else if(i===1)cv.style.transformOrigin='48% 40%'; // 聚焦點=沉思中的公仔（會演戲版結尾）
+      else if(i===2)cv.style.transformOrigin='28% 18%'; // 第3段聚焦「時間」：新 v3 牆鐘在左上
       if(i===2)cv.style.filter='brightness(0.55)'; // 第3段定格：背景變暗，讓中央時鐘成為焦點
       const z=1+A*(1-Math.exp(-tE/tau));cv.style.transform='scale('+z.toFixed(4)+')';}
     else{cv._kb=0;if(cv.style.transform){cv.style.transform='';cv.style.transformOrigin='';}if(cv.style.filter)cv.style.filter='';}}}
@@ -573,13 +573,13 @@ function render(){
    {const v0=VIDS[0];if(i===0&&v0&&!v0.dataset.bad&&!v0.ended){
      if(segElapsed<1.2){if(!v0.paused)v0.pause();try{if(v0.currentTime>0.05)v0.currentTime=0;}catch(e){}}
      else if(v0.paused&&playing){const p=v0.play();if(p&&p.catch)p.catch(()=>{});}}}
-   $('mark1').classList.toggle('show',i===0&&!!VIDS[0]&&VIDS[0].currentTime>=2.6);} // IP版：同事約2.6s完全現身
+   $('mark1').classList.toggle('show',i===0&&!!VIDS[0]&&VIDS[0].currentTime>=2.3);} // 會演戲版：同事約2.2s現身
   // 場景7：「AI 同事」標記等機器人降下(約2.1s)才彈出
   {const v7t=(VIDS[6]&&VIDS[6].currentTime)||0;$('mark7').classList.toggle('show',i===6&&v7t>=0.8&&v7t<=6.8);} // IP版 v7：機器人開場即在(0.8s亮)；6.8s讓位給頭上的大燈泡
   // 場景2：哲人逐站詢問——標記跟著鏡頭裡的人物頭頂移動；每站問完哲人頭上亮 💡 再去下一站（依影片時間驅動，名字必對到人）
   {const vt=(VIDS[1]&&VIDS[1].currentTime)||0;
    deptEls.forEach((el,k)=>{const c=CHIP_T[k];const p=clamp((vt-c.t0)/(c.tx-c.t0),0,1);const x=c.x0+(c.x1-c.x0)*p;
-     const on=(i===1&&vt>=c.t0&&vt<=c.t1&&x>58.5); // 主角(IP公仔)右緣~58%：標記碰到即消失，不再從另一側出現
+     const on=(i===1&&vt>=c.t0&&vt<=c.t1); // 會演戲版 v2：員工定點、標記固定位置+時間窗，不需碰撞消失邏輯
      if(on){el.style.left=x.toFixed(1)+'%';el.style.top=c.top+'%';}
      el.classList.toggle('lit',on);});
    $('bulb').classList.toggle('on',i===1&&BULB_T.some(w=>vt>=w[0]&&vt<=w[1]));
