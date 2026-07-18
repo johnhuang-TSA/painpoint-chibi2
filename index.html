@@ -311,11 +311,11 @@ const VILC=['#4aa8ff','#4ade7a','#ffb05c','#c070ff'];
 const deptEls=[...document.querySelectorAll('.dchip')];
 let qTarget=-1; // （旁白 chunk 掃描仍會更新，供除錯；標記改由影片時間驅動）
 // v2 影片時間軸：四位員工被鏡頭帶到的時間窗與頭頂位置（x 隨鏡頭右→左漂移；由關鍵幀量測）
-const CHIP_T=[ // 依新 v2 逐幀量測「主角走到該站身旁」的影片時窗（短窗、走過就滅）
- {t0:0.8,t1:2.4,x:68,top:30},  // 倉管（箱子，右）
- {t0:3.0,t1:4.6,x:71,top:24},  // 生管（白板，右）
- {t0:5.6,t1:7.0,x:72,top:30},  // 採購（電腦桌，右）
- {t0:7.8,t1:9.9,x:76,top:36}]; // 品管（放大鏡，右）
+const CHIP_T=[ // 依新 v2 逐幀量測「主角走到該站→問到(燈泡)→走過」的影片時窗（走到出現、走過消失）
+ {t0:0.7,t1:2.8,x:62,top:30},  // 倉管（箱子，右；燈泡~2s）
+ {t0:3.1,t1:5.1,x:70,top:24},  // 生管（白板，右；燈泡~5s）
+ {t0:5.4,t1:7.2,x:73,top:30},  // 採購（電腦桌，右；~6.5s）
+ {t0:7.4,t1:9.9,x:76,top:36}]; // 品管（放大鏡，右；燈泡~8s）
 const BULB_T=[]; // 新 v2 影片已內建頭頂實體燈泡，網頁疊加 💡 停用
 const erpCol=document.querySelector('#numpanel .erp'),xdlCol=document.querySelector('#numpanel .xdl'),diffEl=$('numdiff');
 const fcM=document.querySelector('#fastclock .fc-m'),fcH=document.querySelector('#fastclock .fc-h');
@@ -570,9 +570,9 @@ function render(){
    $('mark1').classList.toggle('show',i===0&&!!VIDS[0]&&VIDS[0].currentTime>=3.3);} // 依新 v1：同事約3.1s才完全跳出，標記延到3.3s
   // 場景7：「AI 同事」標記等機器人降下(約2.1s)才彈出
   {const v7t=(VIDS[6]&&VIDS[6].currentTime)||0;$('mark7').classList.toggle('show',i===6&&v7t>=0.8&&v7t<=6.8);} // IP版 v7：機器人開場即在(0.8s亮)；6.8s讓位給頭上的大燈泡
-  // 場景2：標記綁「實際唸到的句子」——旁白開時用 qTarget(doSpeak 唸到含該部門的句子即設)，精準對上真實語速；旁白關時用場景時間均分
-  {const cur=N.on?qTarget:(ls>=1?Math.min(3,Math.floor((ls-1)/2.2)):-1);
-   deptEls.forEach((el,k)=>{const c=CHIP_T[k];const on=(i===1&&cur>=0&&k===cur);
+  // 場景2：標記綁「主角在影片裡的位置」——走到該站(影片時窗)才出現，走過就消失
+  {const vt=(VIDS[1]&&VIDS[1].currentTime)||0;
+   deptEls.forEach((el,k)=>{const c=CHIP_T[k];const on=(i===1&&vt>=c.t0&&vt<=c.t1);
      if(on){el.style.left=c.x+'%';el.style.top=c.top+'%';}
      el.classList.toggle('lit',on);});
    $('bulb').classList.toggle('on',false); // 新 v2 影片內建頭頂實體燈泡，網頁疊加停用
