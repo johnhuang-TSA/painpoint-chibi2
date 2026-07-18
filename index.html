@@ -297,7 +297,7 @@ VIDS.forEach((v,i)=>{v.loop=false;v.addEventListener('error',()=>{v.dataset.bad=
 function ensureVid(i){const v=VIDS[i];if(v&&!v.getAttribute('src')){v.setAttribute('src','videos/v'+v.getAttribute('data-v')+'.mp4?ip=3');}} // 分段載入：用到才設 src；?ip=3 破快取（v1/v4/v5/v6/v7/v8 重生：深藍鎖+logo一致版）
 ensureVid(0);ensureVid(1);
 function sceneFillRate(i){const vd=(VIDS[i]&&VIDS[i].duration)?VIDS[i].duration:10;const sd=N.on?estDur(i):DUR[i];
-  if(i===6)return 0.5;  // v7：紙張匯集放慢(慢動作)，讓「答案湊齊」亮相拖到貼近旁白唸「湊齊」
+  if(i===6)return 1.0;  // v7：自然速度（不再慢動作，避免停頓感）；靠精簡旁白貼近影片長度
   if(i===7)return 1.0;  // v8：自然速度，「不會缺貨」特寫約6s出現，貼近旁白唸「不會缺貨」
   return clamp(vd/sd,0.85,(i===5?1.45:1));} // 其餘近原速；播完定格等旁白
 function playVid(i){ensureVid(i);ensureVid(i+1);VIDS.forEach((v,k)=>{if(k===i){if(!v.dataset.bad){try{v.muted=true;v.currentTime=0;v.playbackRate=sceneFillRate(i)*speed;if(playing){const p=v.play();if(p&&p.catch)p.catch(()=>{});}else{v.pause();}}catch(e){}}}else{try{v.pause();}catch(e){}}});}
@@ -385,7 +385,7 @@ const LANG={
    '更麻煩的是，同一個山苦瓜，ERP 顯示三百零二件，新得利顯示二百八十四件，差了十八件。到底問題出在哪邊？',
    '天黑了，人都走光了，我最放不下的還是——這個答案，真的對嗎？',
    '而這，只是這週幾百個品項裡的其中一個。',
-   '那如果，有一位真正懂供應鏈的 AI 同事呢？同一句問題，它同時查完四個部門、六張表，還比對了 ERP 跟新得利——幾秒鐘，就把答案湊齊。',
+   '那如果，有一位真正懂供應鏈的 AI 同事呢？同一句話，它同時查完四個部門、六張表，幾秒鐘就把答案湊齊。',
    '同事又來問。這次，AI 幾秒就給出答案——不會缺貨，差的十八件也查清楚了：是待驗收。他放心，我安心，共創雙贏。'],
   q:'山苦瓜，下週會不會缺貨？',ans:'「不會。我幫你看過了。」',slogan:'隨問，隨答。',
   depts:['倉管','生管','採購','品管'],tables:['庫存表','預估表','交期表','採購單','驗收紀錄','品檢記錄'],
@@ -403,7 +403,7 @@ const LANG={
    "Worse still — for the same bitter gourd, ERP shows 302 pcs but the second system shows 284. An 18-piece gap. Where exactly is the problem?",
    "Night falls. Everyone else has gone home. And what I still can't shake is — is this answer even right?",
    "And bitter gourd is just one of the hundreds of items I'm watching this week.",
-   "But what if you had an AI teammate who truly understood supply chain? One question — and it checks all four departments, all six sheets, and reconciles ERP against the second system, all at once. In seconds, it has the whole answer.",
+   "But what if you had an AI teammate who truly understood supply chain? One question — it checks all four departments and six sheets at once, and in seconds the answer is ready.",
    "The colleague asks again. This time, the AI answers in seconds — no shortage, and the 18-piece gap is solved too: a pending-inspection batch. He's relieved; so am I. A win-win for everyone."],
   q:'Bitter gourd — will we run out next week?',ans:'“No. I’ve already checked for you.”',slogan:'Ask anytime. Answered instantly.',
   depts:['Warehouse','Planning','Purchasing','QC'],tables:['Stock','Forecast','Lead-time','PO','Receiving','QC log'],
@@ -421,7 +421,7 @@ const LANG={
    '厄介なのは、同じゴーヤなのに、ERPは302個、新得利は284個——18個もずれていること。いったい、どこに問題があるのか？',
    '夜が更けて、みんな帰ってしまった。それでも引っかかるのは——この答え、本当に正しい？',
    'そしてゴーヤは、今週見るべき数百の品目のひとつにすぎない。',
-   'もし、サプライチェーンを本当に理解したAIの同僚がいたら？ひとつの質問で、四つの部門と六枚の表を同時に確認し、ERPと新得利まで突き合わせる——数秒で、答えをすべて揃えてくれる。',
+   'もし、サプライチェーンを本当に理解したAIの同僚がいたら？ひとつの質問で、四つの部門と六枚の表を同時に確認し、数秒で答えをすべて揃えてくれる。',
    '同僚がまた聞きに来た。今度はAIが数秒で答える——欠品しません。差の18個も検収待ちだと突き止めた。彼も安心、私も安心、みんなにウィンウィンだ。'],
   q:'ゴーヤ、来週は欠品する？',ans:'「いいえ。確認しておきました。」',slogan:'聞けば、すぐ答える。',
   depts:['倉庫','生産','購買','品質'],tables:['在庫表','予測表','納期表','発注書','検収記録','品質検査'],
@@ -570,9 +570,11 @@ function render(){
    $('mark1').classList.toggle('show',i===0&&!!VIDS[0]&&VIDS[0].currentTime>=3.3);} // 依新 v1：同事約3.1s才完全跳出，標記延到3.3s
   // 場景7：「AI 同事」標記等機器人降下(約2.1s)才彈出
   {const v7t=(VIDS[6]&&VIDS[6].currentTime)||0;$('mark7').classList.toggle('show',i===6&&v7t>=0.8&&v7t<=6.8);} // IP版 v7：機器人開場即在(0.8s亮)；6.8s讓位給頭上的大燈泡
-  // 場景2：四工作站依影片時間逐一亮標記（隨人物走到就出現，一次一個；四個都會依序出現）
-  {const vt=(VIDS[1]&&VIDS[1].currentTime)||0;
-   deptEls.forEach((el,k)=>{const c=CHIP_T[k];const on=(i===1&&vt>=c.t0&&vt<=c.t1);
+  // 場景2：標記依「旁白進度」逐一亮——旁白唸到哪個部門(字元位置換算)那個才出現，換下一個就消失
+  {const ed=estDur(1),frac=N.on?clamp(segElapsed/ed,0,1):clamp(ls/DUR[1],0,1);
+   // 目前唸到第幾個部門＝frac 落在哪兩個 VO2FRAC 之間；只亮那一個
+   let cur=-1;for(let k=0;k<4;k++){if(frac>=VO2FRAC[k]-0.02)cur=k;}
+   deptEls.forEach((el,k)=>{const c=CHIP_T[k];const on=(i===1&&k===cur);
      if(on){el.style.left=c.x+'%';el.style.top=c.top+'%';}
      el.classList.toggle('lit',on);});
    $('bulb').classList.toggle('on',false); // 新 v2 影片內建頭頂實體燈泡，網頁疊加停用
