@@ -311,11 +311,11 @@ const VILC=['#4aa8ff','#4ade7a','#ffb05c','#c070ff'];
 const deptEls=[...document.querySelectorAll('.dchip')];
 let qTarget=-1; // （旁白 chunk 掃描仍會更新，供除錯；標記改由影片時間驅動）
 // v2 影片時間軸：四位員工被鏡頭帶到的時間窗與頭頂位置（x 隨鏡頭右→左漂移；由關鍵幀量測）
-const CHIP_T=[ // 依新 v2 影片時間：四工作站依序在主角身後經過，標記依影片時間逐一亮（一次一個，隨人物走到就出現）
- {t0:1.3,t1:3.1,x:70,top:30},  // 倉管（箱子，右）
- {t0:3.3,t1:5.0,x:66,top:22},  // 生管（白板，右上）
- {t0:5.2,t1:6.9,x:75,top:32},  // 採購（電腦桌，右）
- {t0:7.1,t1:9.6,x:78,top:38}]; // 品管（放大鏡，右）
+const CHIP_T=[ // 依新 v2 逐幀量測「主角走到該站身旁」的影片時窗（短窗、走過就滅）
+ {t0:0.8,t1:2.4,x:68,top:30},  // 倉管（箱子，右）
+ {t0:3.0,t1:4.6,x:71,top:24},  // 生管（白板，右）
+ {t0:5.6,t1:7.0,x:72,top:30},  // 採購（電腦桌，右）
+ {t0:7.8,t1:9.9,x:76,top:36}]; // 品管（放大鏡，右）
 const BULB_T=[]; // 新 v2 影片已內建頭頂實體燈泡，網頁疊加 💡 停用
 const erpCol=document.querySelector('#numpanel .erp'),xdlCol=document.querySelector('#numpanel .xdl'),diffEl=$('numdiff');
 const fcM=document.querySelector('#fastclock .fc-m'),fcH=document.querySelector('#fastclock .fc-h');
@@ -380,7 +380,7 @@ const LANG={
  zh:{name:'中文',code:'zh-TW',
   narr:[
    '山苦瓜，下週會不會缺貨？——同事順口一問，我卻沒辦法馬上回答。',
-   '先到倉管，問庫存還有多少；再走到生管，問原料夠不夠。接著找採購，問下一批到貨；最後到品管，問檢驗報告好了沒。一句話，得跑四站。',
+   '先到倉管問庫存；再到生管問原料；接著採購問到貨；最後品管問檢驗——一句話，得跑四站。',
    '想自己查？光是攤開庫存表、預估表、交期表、採購單、驗收紀錄、品檢記錄——六張表一張一張比對，一整天就沒了。',
    '更麻煩的是，同一個山苦瓜，ERP 顯示三百零二件，新得利顯示二百八十四件，差了十八件。到底問題出在哪邊？',
    '天黑了，人都走光了，我最放不下的還是——這個答案，真的對嗎？',
@@ -416,7 +416,7 @@ const LANG={
  ja:{name:'日本語',code:'ja-JP',
   narr:[
    'ゴーヤ、来週は欠品する？——同僚が軽く聞いてきた。でも私は、すぐには答えられない。',
-   'まず倉庫で、在庫はいくつか聞く。次に生産管理で、原料は足りるか。続いて購買で、次のロットはいつか。最後に品質管理で、検査報告はまだかと——ひとつの質問で、四か所も回る。',
+   'まず倉庫で在庫、次に生産管理で原料、続いて購買で入荷、最後に品質管理で検査——ひとつの質問で、四か所も回る。',
    'もちろん自分で調べてもいい。でも資料をめくるだけでも、在庫表、予測表、納期表、発注書、検収記録、品質検査記録——六枚の表を広げて、一枚ずつ照合して、一日がまるごと消える。',
    '厄介なのは、同じゴーヤなのに、ERPは302個、新得利は284個——18個もずれていること。いったい、どこに問題があるのか？',
    '夜が更けて、みんな帰ってしまった。それでも引っかかるのは——この答え、本当に正しい？',
@@ -570,11 +570,9 @@ function render(){
    $('mark1').classList.toggle('show',i===0&&!!VIDS[0]&&VIDS[0].currentTime>=3.3);} // 依新 v1：同事約3.1s才完全跳出，標記延到3.3s
   // 場景7：「AI 同事」標記等機器人降下(約2.1s)才彈出
   {const v7t=(VIDS[6]&&VIDS[6].currentTime)||0;$('mark7').classList.toggle('show',i===6&&v7t>=0.8&&v7t<=6.8);} // IP版 v7：機器人開場即在(0.8s亮)；6.8s讓位給頭上的大燈泡
-  // 場景2：標記依「旁白進度」逐一亮——旁白唸到哪個部門(字元位置換算)那個才出現，換下一個就消失
-  {const ed=estDur(1),frac=N.on?clamp(segElapsed/ed,0,1):clamp(ls/DUR[1],0,1);
-   // 目前唸到第幾個部門＝frac 落在哪兩個 VO2FRAC 之間；只亮那一個
-   let cur=-1;for(let k=0;k<4;k++){if(frac>=VO2FRAC[k]-0.02)cur=k;}
-   deptEls.forEach((el,k)=>{const c=CHIP_T[k];const on=(i===1&&k===cur);
+  // 場景2：標記依影片時窗逐一亮——主角走到該站身旁才出現，走過就滅（短窗，一次一個）
+  {const vt=(VIDS[1]&&VIDS[1].currentTime)||0;
+   deptEls.forEach((el,k)=>{const c=CHIP_T[k];const on=(i===1&&vt>=c.t0&&vt<=c.t1);
      if(on){el.style.left=c.x+'%';el.style.top=c.top+'%';}
      el.classList.toggle('lit',on);});
    $('bulb').classList.toggle('on',false); // 新 v2 影片內建頭頂實體燈泡，網頁疊加停用
