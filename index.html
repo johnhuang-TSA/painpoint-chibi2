@@ -570,9 +570,10 @@ function render(){
    $('mark1').classList.toggle('show',i===0&&!!VIDS[0]&&VIDS[0].currentTime>=3.3);} // 依新 v1：同事約3.1s才完全跳出，標記延到3.3s
   // 場景7：「AI 同事」標記等機器人降下(約2.1s)才彈出
   {const v7t=(VIDS[6]&&VIDS[6].currentTime)||0;$('mark7').classList.toggle('show',i===6&&v7t>=0.8&&v7t<=6.8);} // IP版 v7：機器人開場即在(0.8s亮)；6.8s讓位給頭上的大燈泡
-  // 場景2：標記依影片時窗逐一亮——主角走到該站身旁才出現，走過就滅（短窗，一次一個）
-  {const vt=(VIDS[1]&&VIDS[1].currentTime)||0;
-   deptEls.forEach((el,k)=>{const c=CHIP_T[k];const on=(i===1&&vt>=c.t0&&vt<=c.t1);
+  // 場景2：標記依「旁白進度」逐一亮——旁白唸到哪個部門(字元位置)那個才亮，唸到下一個就換掉(講完即消失)
+  {const ed=estDur(1),f=N.on?clamp(segElapsed/ed,0,1):clamp(ls/DUR[1],0,1);
+   let cur=-1;for(let k=0;k<4;k++){if(f>=VO2FRAC[k])cur=k;}
+   deptEls.forEach((el,k)=>{const c=CHIP_T[k];const on=(i===1&&k===cur);
      if(on){el.style.left=c.x+'%';el.style.top=c.top+'%';}
      el.classList.toggle('lit',on);});
    $('bulb').classList.toggle('on',false); // 新 v2 影片內建頭頂實體燈泡，網頁疊加停用
