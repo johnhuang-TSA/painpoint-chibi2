@@ -294,7 +294,7 @@ addEventListener('resize',layout);addEventListener('load',layout);
 // ---------- 影片：每幕一段，載入失敗(缺 v5~v8)則自動退回底色背景 ----------
 const VIDS=[...document.querySelectorAll('.vid')]; // index 0..7 對應 v1..v8、對應場景 0..7
 VIDS.forEach((v,i)=>{v.loop=false;v.addEventListener('error',()=>{v.dataset.bad='1';v.style.display='none';});}); // 不循環：播完停在最後一格（定格）等旁白，避免「播完一輪又重來」的跳接
-function ensureVid(i){const v=VIDS[i];if(v&&!v.getAttribute('src')){v.setAttribute('src','videos/v'+v.getAttribute('data-v')+'.mp4?ip=5');}} // 分段載入：用到才設 src；?ip=3 破快取（v1/v4/v5/v6/v7/v8 重生：深藍鎖+logo一致版）
+function ensureVid(i){const v=VIDS[i];if(v&&!v.getAttribute('src')){v.setAttribute('src','videos/v'+v.getAttribute('data-v')+'.mp4?ip=6');}} // 分段載入：用到才設 src；?ip=6 破快取（v8 換不跳版+第7秒定格推近聚焦主角）
 ensureVid(0);ensureVid(1);
 function sceneFillRate(i){const vd=(VIDS[i]&&VIDS[i].duration)?VIDS[i].duration:10;const sd=N.on?estDur(i):DUR[i];
   if(i===6)return 1.0;  // v7：自然速度（不再慢動作，避免停頓感）；靠精簡旁白貼近影片長度
